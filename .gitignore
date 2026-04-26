@@ -1,0 +1,51 @@
+# ──────────────────────────────────────────────────
+#  Softcurse's Chess — .gitignore
+# ──────────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Large media assets (use Git LFS or host externally)
+public/intro/flash_screen.mp4
+public/assets/poster.png
+
+# Environment & secrets
+.env
+.env.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches
+.eslintcache
+.parcel-cache/
+.cache/
+
+# Agent / AI metadata
+.antigravity/
+.gemini/
+
+# Temporary patch scripts
+patch_board.cjs
