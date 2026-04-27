@@ -131,13 +131,15 @@ export default function BattleChess3D() {
           node.receiveShadow = true;
           node.castShadow = true;
           if (node.material) {
-            node.material = node.material.clone();
-            // Drop shininess to make it darker/less blown out
-            node.material.envMapIntensity = 0.4;
-            // Slightly darken pure white materials if present
-            if (node.material.color) {
-              node.material.color.lerp(new THREE.Color(0x333333), 0.2);
-            }
+            const mats = Array.isArray(node.material) ? node.material : [node.material];
+            mats.forEach(m => {
+              // Only drop shininess slightly, avoid lerping out textures.
+              m.envMapIntensity = 0.8;
+              if (m.color && m.color.getHex() === 0xffffff) {
+                // Slightly dim pure whites
+                m.color.setHex(0xd0d0d0);
+              }
+            });
           }
         }
       });

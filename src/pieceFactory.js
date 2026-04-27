@@ -141,9 +141,13 @@ export function makePiece(type, color) {
 
             mesh.traverse(node => {
                 if (!node.isMesh) return;
-                node.material = node.material.clone();
-                node.material.envMapIntensity = 1.2;
-                node.material.needsUpdate = true;
+                if (node.material) {
+                    const mats = Array.isArray(node.material) ? node.material : [node.material];
+                    mats.forEach(m => {
+                        m.envMapIntensity = 1.2;
+                        m.needsUpdate = true;
+                    });
+                }
                 node.castShadow = true;
                 node.receiveShadow = true;
             });
