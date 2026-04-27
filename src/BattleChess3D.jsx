@@ -117,361 +117,46 @@ export default function BattleChess3D() {
     const boardGrp = new THREE.Group();
     scene.add(boardGrp);
 
-    // ── Utility: canvas texture factory ─────────────────────────
-    function makeCanvasTex(w, h, draw) {
-      const c = document.createElement("canvas");
-      c.width = w; c.height = h;
-      draw(c.getContext("2d"), w, h);
-      const t = new THREE.CanvasTexture(c);
-      return t;
-    }
+    // ── Load 3D Board Model ──────────────────────────────────────
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load('/models/board/board.glb', (gltf) => {
+      const bModel = gltf.scene;
+      // Position board down slightly so top sits around y=0
+      bModel.position.set(0, -0.1, 0);
 
-    // ── Dark tile texture: cracked obsidian with rune veins ──────
-    const darkTileTex = makeCanvasTex(256, 256, (ctx, W, H) => {
-      ctx.fillStyle = "#05040e";
-      ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < 3200; i++) {
-        const x = Math.random() * W, y = Math.random() * H;
-        const b = Math.floor(Math.random() * 28 + 4);
-        ctx.fillStyle = `rgb(${b},${b},${Math.floor(b * 1.6)})`;
-        ctx.fillRect(x, y, 1, 1);
-      }
-      ctx.strokeStyle = "rgba(180,40,10,0.55)";
-      ctx.lineWidth = 0.8;
-      const cracks = [
-        [[30, 10], [80, 60], [120, 55], [160, 110]],
-        [[200, 20], [170, 80], [210, 130], [190, 200]],
-        [[10, 180], [70, 160], [100, 200], [140, 220]],
-        [[220, 220], [180, 180], [230, 150]],
-        [[90, 90], [130, 70], [150, 120]],
-      ];
-      cracks.forEach(pts => {
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(255,80,20,0.18)";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(180,40,10,0.55)";
-        ctx.lineWidth = 0.8;
-      });
-      ctx.strokeStyle = "rgba(60,20,180,0.22)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(128, 128, 40, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        const x = 128 + Math.cos(a) * 40, y = 128 + Math.sin(a) * 40;
-        const a2 = ((i + 2) / 6) * Math.PI * 2;
-        const x2 = 128 + Math.cos(a2) * 40, y2 = 128 + Math.sin(a2) * 40;
-        ctx.moveTo(x, y); ctx.lineTo(x2, y2);
-      }
-      ctx.stroke();
-    });
-
-    // ── Light tile texture: scorched amber stone ─────────────────
-    const lightTileTex = makeCanvasTex(256, 256, (ctx, W, H) => {
-      const grad = ctx.createRadialGradient(128, 128, 10, 128, 128, 160);
-      grad.addColorStop(0, "#c8820e");
-      grad.addColorStop(0.5, "#a06210");
-      grad.addColorStop(1, "#6b3e08");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < 4000; i++) {
-        const x = Math.random() * W, y = Math.random() * H;
-        const a = Math.random() * 0.12;
-        ctx.fillStyle = `rgba(${Math.random() > 0.5 ? 255 : 80},${Math.floor(Math.random() * 40 + 20)},0,${a})`;
-        ctx.fillRect(x, y, Math.random() * 3, 1);
-      }
-      for (let i = 0; i < 5; i++) {
-        const bx = Math.random() * W, by = Math.random() * H, br = Math.random() * 30 + 10;
-        const bg = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-        bg.addColorStop(0, "rgba(10,5,0,0.45)");
-        bg.addColorStop(1, "rgba(10,5,0,0)");
-        ctx.fillStyle = bg;
-        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.strokeStyle = "rgba(255,100,10,0.5)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(20, 220); ctx.lineTo(80, 160); ctx.lineTo(140, 180); ctx.lineTo(200, 120);
-      ctx.stroke();
-      ctx.strokeStyle = "rgba(255,160,30,0.25)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(20, 220); ctx.lineTo(80, 160); ctx.lineTo(140, 180); ctx.lineTo(200, 120);
-      ctx.stroke();
-    });
-
-    // ── Emissive crack map for dark tiles ────────────────────────
-    const darkEmissiveTex = makeCanvasTex(256, 256, (ctx, W, H) => {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = "rgba(255,70,10,1)";
-      ctx.lineWidth = 1.2;
-      const cracks = [
-        [[30, 10], [80, 60], [120, 55], [160, 110]],
-        [[200, 20], [170, 80], [210, 130], [190, 200]],
-        [[10, 180], [70, 160], [100, 200], [140, 220]],
-        [[220, 220], [180, 180], [230, 150]],
-        [[90, 90], [130, 70], [150, 120]],
-      ];
-      cracks.forEach(pts => {
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-        ctx.stroke();
-      });
-    });
-
-    // ── Border frame texture: iron with bone inlay ───────────────
-    const borderTex = makeCanvasTex(512, 64, (ctx, W, H) => {
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, "#2a2a2a");
-      g.addColorStop(0.4, "#1a1a1a");
-      g.addColorStop(0.6, "#111");
-      g.addColorStop(1, "#222");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-      for (let x = 24; x < W; x += 48) {
-        const rg = ctx.createRadialGradient(x, H / 2, 0, x, H / 2, 7);
-        rg.addColorStop(0, "#888"); rg.addColorStop(1, "#333");
-        ctx.fillStyle = rg;
-        ctx.beginPath(); ctx.arc(x, H / 2, 5, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.fillStyle = "rgba(220,210,190,0.08)";
-      ctx.fillRect(0, H * 0.3, W, H * 0.4);
-      ctx.strokeStyle = "rgba(180,40,10,0.35)";
-      ctx.lineWidth = 0.7;
-      for (let x = 12; x < W; x += 48) {
-        ctx.beginPath();
-        ctx.moveTo(x, H * 0.2); ctx.lineTo(x + 6, H * 0.5); ctx.lineTo(x, H * 0.8);
-        ctx.moveTo(x + 12, H * 0.2); ctx.lineTo(x + 6, H * 0.5); ctx.lineTo(x + 12, H * 0.8);
-        ctx.stroke();
-      }
-    });
-
-    // ── Materials ────────────────────────────────────────────────
-    const darkSqMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0010,
-      roughness: 0.9,
-      metalness: 0.1,
-      emissive: new THREE.Color(0x330008),
-      emissiveIntensity: 0.6,
-    });
-
-    const lightSqMat = new THREE.MeshStandardMaterial({
-      color: 0x8b1a1a,
-      roughness: 0.8,
-      metalness: 0.2,
-      emissive: new THREE.Color(0x440000),
-      emissiveIntensity: 0.5,
-    });
-
-    // ── Base terrain slab ────────────────────────────────────────
-    const slabMat = new THREE.MeshStandardMaterial({
-      color: 0x050508,
-      metalness: 0.05,
-      roughness: 0.95,
-      emissive: new THREE.Color(0x110402),
-      emissiveIntensity: 0.4,
-    });
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.32, 11.6), slabMat);
-    slab.position.y = -0.16;
-    slab.receiveShadow = true;
-    slab.castShadow = true;
-    boardGrp.add(slab);
-
-    const subSlabMat = new THREE.MeshStandardMaterial({
-      color: 0x030204,
-      roughness: 0.9,
-      metalness: 0.2,
-    });
-    const subSlab = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.14, 12.2), subSlabMat);
-    subSlab.position.y = -0.38;
-    subSlab.receiveShadow = true;
-    boardGrp.add(subSlab);
-
-    // ── Lava underglow — hellfire beneath the board ──────────────
-    const glowLight = new THREE.PointLight(0xff2200, 3.5, 12);
-    glowLight.position.set(0, -0.9, 0);
-    boardGrp.add(glowLight);
-
-    const glowLight2 = new THREE.PointLight(0xff6600, 1.5, 8);
-    glowLight2.position.set(3, -0.6, 3);
-    boardGrp.add(glowLight2);
-
-    const glowLight3 = new THREE.PointLight(0xaa0022, 1.2, 8);
-    glowLight3.position.set(-3, -0.6, -3);
-    boardGrp.add(glowLight3);
-
-    // ── Border frame — iron + bone construction ──────────────────
-    const borderMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.4,
-      metalness: 0.9,
-      emissive: new THREE.Color(0x0a0204),
-      emissiveIntensity: 0.3,
-    });
-
-    const bW = 11.6, bH = 0.28, bD = 0.62;
-    const borderDefs = [
-      { pos: [0, 0.02, -5.61], rot: [0, 0, 0], w: bW, h: bH, d: bD },
-      { pos: [0, 0.02, 5.61], rot: [0, Math.PI, 0], w: bW, h: bH, d: bD },
-      { pos: [-5.61, 0.02, 0], rot: [0, Math.PI / 2, 0], w: bW, h: bH, d: bD },
-      { pos: [5.61, 0.02, 0], rot: [0, -Math.PI / 2, 0], w: bW, h: bH, d: bD },
-    ];
-    borderDefs.forEach(({ pos, rot, w, h, d }) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), borderMat);
-      m.position.set(...pos);
-      m.rotation.set(...rot);
-      m.castShadow = true;
-      boardGrp.add(m);
-    });
-
-    // ── Corner pillars — broken cathedral columns ────────────────
-    function makePillar(x, z) {
-      const grp = new THREE.Group();
-      grp.position.set(x, 0, z);
-      const baseMat = new THREE.MeshStandardMaterial({
-        color: 0x111115, roughness: 0.6, metalness: 0.7,
-        emissive: new THREE.Color(0x220500), emissiveIntensity: 0.5,
-      });
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 0.22, 8), baseMat);
-      base.position.y = 0.11; base.castShadow = true;
-      grp.add(base);
-
-      const shaftMat = new THREE.MeshStandardMaterial({
-        color: 0x0e0c14, roughness: 0.75, metalness: 0.5,
-        emissive: new THREE.Color(0x1a0200), emissiveIntensity: 0.4,
-      });
-      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 1.1, 7), shaftMat);
-      shaft.position.y = 0.77; shaft.castShadow = true;
-      grp.add(shaft);
-
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.22, 0.18, 8), baseMat);
-      cap.position.y = 1.42; cap.castShadow = true;
-      grp.add(cap);
-
-      const spikeMat = new THREE.MeshStandardMaterial({
-        color: 0xe8d8b0, roughness: 0.6, metalness: 0.1,
-        emissive: new THREE.Color(0x330800), emissiveIntensity: 0.2,
-      });
-      [0, Math.PI * 2 / 3, Math.PI * 4 / 3].forEach(a => {
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.38, 5), spikeMat);
-        spike.position.set(Math.cos(a) * 0.2, 1.71, Math.sin(a) * 0.2);
-        spike.castShadow = true;
-        grp.add(spike);
-      });
-
-      const mainSpike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.55, 5), spikeMat);
-      mainSpike.position.y = 1.84; mainSpike.castShadow = true;
-      grp.add(mainSpike);
-
-      const fire = new THREE.PointLight(0xff0000, 2.2, 5);
-      fire.position.y = 2.1;
-      grp.userData.fireLight = fire;
-      grp.add(fire);
-
-      const flameMat = new THREE.MeshStandardMaterial({
-        color: 0xff1100, emissive: new THREE.Color(0xff2200),
-        emissiveIntensity: 5.0, roughness: 1.0, metalness: 0.0,
-        transparent: true, opacity: 0.85,
-      });
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 6), flameMat);
-      flame.position.y = 2.08;
-      grp.userData.flameGem = flame;
-      grp.add(flame);
-
-      const chainMat = new THREE.MeshStandardMaterial({ color: 0x3a3030, roughness: 0.8, metalness: 0.9 });
-      for (let i = 0; i < 3; i++) {
-        const ca = (i / 3) * Math.PI * 2 + 0.4;
-        for (let j = 0; j < 4; j++) {
-          const link = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 4, 6), chainMat);
-          link.position.set(Math.cos(ca) * 0.15, 1.25 - j * 0.11, Math.sin(ca) * 0.15);
-          link.rotation.x = (j % 2) * Math.PI / 2;
-          grp.add(link);
+      bModel.traverse(node => {
+        if (node.isMesh) {
+          node.receiveShadow = true;
+          node.castShadow = true;
+          if (node.material) {
+            node.material = node.material.clone();
+            node.material.envMapIntensity = 1.2;
+          }
         }
-      }
-
-      boardGrp.add(grp);
-      return grp;
-    }
-
-    const pillarPositions = [[-5.5, -5.5], [-5.5, 5.5], [5.5, -5.5], [5.5, 5.5]];
-    const pillars = pillarPositions.map(([x, z]) => makePillar(x, z));
-
-    // ── Spike rail between pillars — border spikes ───────────────
-    const spikeMat2 = new THREE.MeshStandardMaterial({
-      color: 0x1a1622, roughness: 0.5, metalness: 0.95,
-      emissive: new THREE.Color(0x0a0005), emissiveIntensity: 0.2,
-    });
-    const railSides = [
-      { axis: "z", sign: -1, xRange: [-4.5, 4.5] },
-      { axis: "z", sign: 1, xRange: [-4.5, 4.5] },
-      { axis: "x", sign: -1, xRange: [-4.5, 4.5] },
-      { axis: "x", sign: 1, xRange: [-4.5, 4.5] },
-    ];
-    railSides.forEach(({ axis, sign, xRange }) => {
-      for (let p = xRange[0]; p <= xRange[1]; p += 1.1) {
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.28, 5), spikeMat2);
-        if (axis === "z") spike.position.set(p, 0.35, sign * 5.61);
-        else spike.position.set(sign * 5.61, 0.35, p);
-        spike.castShadow = true;
-        boardGrp.add(spike);
-      }
+      });
+      boardGrp.add(bModel);
     });
 
-    // ── Fog plane — ground-level hellsmoke ───────────────────────
-    const fogPlaneMat = new THREE.MeshBasicMaterial({
-      color: 0x110002, transparent: true, opacity: 0.55,
-      depthWrite: false, side: THREE.DoubleSide,
-    });
-    const fogPlane = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), fogPlaneMat);
-    fogPlane.rotation.x = -Math.PI / 2;
-    fogPlane.position.y = -0.5;
-    boardGrp.add(fogPlane);
-
-    // ── Grid lines — blood-red, thin ─────────────────────────────
-    const glm = new THREE.LineBasicMaterial({
-      color: 0x660010, transparent: true, opacity: 0.3,
-    });
-    for (let i = 0; i <= 8; i++) {
-      const x = i * SZ + OFF - SZ / 2;
-      boardGrp.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(x, 0.008, OFF - SZ / 2),
-          new THREE.Vector3(x, 0.008, OFF + 8 * SZ - SZ / 2),
-        ]), glm));
-    }
-    for (let i = 0; i <= 8; i++) {
-      const z = i * SZ + OFF - SZ / 2;
-      boardGrp.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(OFF - SZ / 2, 0.008, z),
-          new THREE.Vector3(OFF + 8 * SZ - SZ / 2, 0.008, z),
-        ]), glm));
-    }
-
-    // ── 64 Chess squares ─────────────────────────────────────────
+    // ── 64 Transparent Hitbox Squares ────────────────────────────
     const sqMeshes = [];
+    // A completely transparent material that we tint to highlight squares
+    const hitMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false
+    });
+
     for (let r = 0; r < 8; r++) {
       sqMeshes[r] = [];
       for (let f = 0; f < 8; f++) {
-        const isDark = (r + f) % 2 === 1;
-        const mat = (isDark ? darkSqMat : lightSqMat).clone();
+        const mat = hitMat.clone();
         const m = new THREE.Mesh(new THREE.PlaneGeometry(SZ, SZ), mat);
         const pos = toWorld(r, f);
         m.rotation.x = -Math.PI / 2;
-        m.position.set(pos.x, 0.001, pos.z);
-        m.receiveShadow = true;
-        m.userData = { r, f, isDark, mat };
+        // Float just above the board surface to avoid z-fighting
+        m.position.set(pos.x, 0.015, pos.z);
+        m.userData = { r, f, mat };
         boardGrp.add(m);
         sqMeshes[r][f] = m;
       }
@@ -529,30 +214,36 @@ export default function BattleChess3D() {
       hlMeshes.length = 0;
       for (let r = 0; r < 8; r++)
         for (let f = 0; f < 8; f++) {
-          const { isDark, mat } = sqMeshes[r][f].userData;
-          mat.color.setHex(isDark ? 0x05050f : 0xb07a18);
-          if (mat.emissive) mat.emissive.setHex(isDark ? 0x000000 : 0x1a0e00);
-          mat.emissiveIntensity = isDark ? 0 : 0.2;
+          const { mat } = sqMeshes[r][f].userData;
+          mat.opacity = 0.0;
         }
     }
     function showHL(sel, moves, last, chkC, board) {
       clearHL();
       if (last) {
-        [[last.fr, last.ff], [last.tr, last.tf]].forEach(([r, f]) =>
-          sqMeshes[r][f].userData.mat.color.set(0x331822));
+        [[last.fr, last.ff], [last.tr, last.tf]].forEach(([r, f]) => {
+          sqMeshes[r][f].userData.mat.color.setHex(0x551133);
+          sqMeshes[r][f].userData.mat.opacity = 0.4;
+        });
       }
       if (chkC) {
         const k = findKing(board, chkC);
-        if (k) sqMeshes[k[0]][k[1]].userData.mat.color.set(0x880022);
+        if (k) {
+          sqMeshes[k[0]][k[1]].userData.mat.color.setHex(0x990022);
+          sqMeshes[k[0]][k[1]].userData.mat.opacity = 0.6;
+        }
       }
-      if (sel) sqMeshes[sel[0]][sel[1]].userData.mat.color.set(0x401030);
+      if (sel) {
+        sqMeshes[sel[0]][sel[1]].userData.mat.color.setHex(0x33ff66);
+        sqMeshes[sel[0]][sel[1]].userData.mat.opacity = 0.3;
+      }
       moves.forEach(([r, f]) => {
         const hasP = !!board[r][f];
         const geo = hasP ? new THREE.RingGeometry(0.3, 0.44, 24) : new THREE.CircleGeometry(0.18, 20);
         const mat = new THREE.MeshBasicMaterial({ color: 0xc5a059, transparent: true, opacity: 0.78, side: THREE.DoubleSide });
         const dot = new THREE.Mesh(geo, mat);
         const p2 = toWorld(r, f);
-        dot.position.set(p2.x, 0.08, p2.z); dot.rotation.x = -Math.PI / 2;
+        dot.position.set(p2.x, 0.04, p2.z); dot.rotation.x = -Math.PI / 2;
         scene.add(dot); hlMeshes.push(dot);
       });
     }
@@ -1086,18 +777,7 @@ export default function BattleChess3D() {
       accentPt.position.x = -3 + Math.sin(t * 0.3) * 0.8;
       accentPt.position.z = -3 + Math.cos(t * 0.3) * 0.8;
 
-      // Animate hellfire pillars
-      pillars.forEach((p, i) => {
-        const fl = p.userData.fireLight;
-        const fg = p.userData.flameGem;
-        if (fl) fl.intensity = 2.2 + Math.sin(t * 4.5 + i * 1.3) * 0.9 + Math.sin(t * 11 + i) * 0.3;
-        if (fg) fg.position.y = 2.1 + Math.sin(t * 5.5 + i * 0.8) * 0.04;
-      });
 
-      // Pulse lava underglow
-      glowLight.intensity = 3.5 + Math.sin(t * 0.8) * 0.8 + Math.sin(t * 2.3) * 0.4;
-      glowLight2.intensity = 1.5 + Math.sin(t * 1.2 + 1) * 0.5;
-      glowLight3.intensity = 1.2 + Math.sin(t * 0.9 + 2) * 0.4;
 
       renderer.render(scene, camera);
     };
