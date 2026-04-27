@@ -121,8 +121,10 @@ export default function BattleChess3D() {
     const gltfLoader = new GLTFLoader();
     gltfLoader.load('/models/board/board.glb', (gltf) => {
       const bModel = gltf.scene;
-      // Position board down slightly so top sits around y=0
-      bModel.position.set(0, -0.1, 0);
+      // Drop it further down if pieces are clipping:
+      bModel.position.set(0, -0.6, 0);
+      // Scale it down since it was ~twice as big
+      bModel.scale.setScalar(0.45);
 
       bModel.traverse(node => {
         if (node.isMesh) {
@@ -130,11 +132,17 @@ export default function BattleChess3D() {
           node.castShadow = true;
           if (node.material) {
             node.material = node.material.clone();
-            node.material.envMapIntensity = 1.2;
+            // Drop shininess to make it darker/less blown out
+            node.material.envMapIntensity = 0.4;
+            // Slightly darken pure white materials if present
+            if (node.material.color) {
+              node.material.color.lerp(new THREE.Color(0x333333), 0.2);
+            }
           }
         }
       });
       boardGrp.add(bModel);
+      window.bModel = bModel; // Expose for live tweaking in console!
     });
 
     // ── 64 Transparent Hitbox Squares ────────────────────────────
