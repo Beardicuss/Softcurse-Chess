@@ -306,6 +306,7 @@ export default function BattleChess3D() {
       const castleRookToPos = wasCastle ? toWorld(fr, tf === 6 ? 5 : 3) : null;
       const castleRookToKey = wasCastle ? `${fr},${tf === 6 ? 5 : 3}` : null;
       const afterAnim = () => {
+        historyRef.current.push(JSON.parse(JSON.stringify(g)));
         delete PM[fk];
         if (isPawnPromo) {
           scene.remove(movMesh); const newM = makePiece(chosenPromo, piece.c);
@@ -427,7 +428,18 @@ export default function BattleChess3D() {
       if (cfg) {
         if (cfg.mode) { modeRef.current = cfg.mode; setModeFixed(cfg.mode); }
         if (cfg.diff) { diffRef.current = cfg.diff; setDiffFixed(cfg.diff); }
-        if (cfg.side) { playerSideRef.current = cfg.side; setPlayerSide(cfg.side); }
+        if (cfg.side) {
+          playerSideRef.current = cfg.side;
+          setPlayerSide(cfg.side);
+          // Set camera behind the chosen side
+          if (cfg.side === B) {
+            camState.current.targetTheta = Math.PI;
+            camState.current.theta = Math.PI;
+          } else {
+            camState.current.targetTheta = 0;
+            camState.current.theta = 0;
+          }
+        }
         window._battleChessReset?.();
         if (modeRef.current === "ai" && playerSideRef.current === B) doAITurn();
       } else {
@@ -446,9 +458,31 @@ export default function BattleChess3D() {
     window._battleChessExitToMenu = () => { gameStartedRef.current = false; setGameStarted(false); };
     window._battleChessUndo = () => {
       if (animatingRef.current || historyRef.current.length === 0) return;
-      const last = historyRef.current.pop(); gsRef.current = last; spawnAll(last.board); clearHL();
-      setMsg(statusMsg(last, last.turn === W ? B : W)); setCaps({ w: last.capW, b: last.capB }); setMoveCount(c => c - 1);
-      setMoveLog(ml => ml.slice(0, -1));
+      
+      const undoOnce = () => {
+        if (historyRef.current.length === 0) return;
+        const last = historyRef.current.pop();
+        gsRef.current = last;
+        spawnAll(last.board);
+        clearHL();
+        setMsg(statusMsg(last, last.turn === W ? B : W));
+        setCaps({ w: last.capW, b: last.capB });
+        setMoveCount(c => Math.max(0, c - 1));
+        setMoveLog(ml => {
+          if (ml.length === 0) return ml;
+          const lastEntry = ml[ml.length - 1];
+          if (lastEntry.b === null) return ml.slice(0, -1);
+          return [...ml.slice(0, -1), { ...lastEntry, b: null }];
+        });
+      };
+
+      undoOnce();
+      // In AI mode, undo twice to get back to player's turn
+      if (modeRef.current === "ai" && historyRef.current.length > 0) {
+        undoOnce();
+      }
+      
+      if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
     };
 
     const animate = (time) => {
