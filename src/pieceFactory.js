@@ -139,33 +139,10 @@ export function makePiece(type, color) {
 
             const mesh = geoMeshObj.clone();
 
-            // Traverse all child meshes — preserves baked textures,
-            // only tints color and boosts PBR properties per team
             mesh.traverse(node => {
                 if (!node.isMesh) return;
                 node.material = node.material.clone();
-                // Strip the Blender-baked dark texture maps so pure scalar tints work correctly
-                node.material.map = null;
-                node.material.metalnessMap = null;
-                node.material.roughnessMap = null;
-
-                if (isW) {
-                    // Angels — bright gold
-                    node.material.color.setHex(0xffd700);
-                    node.material.metalness = 0.8;
-                    node.material.roughness = 0.3;
-                    node.material.envMapIntensity = 1.5;
-                    node.material.emissive = new THREE.Color(0x332200);
-                    node.material.emissiveIntensity = 0.3;  // slight warm glow
-                } else {
-                    // Daemons — dark silver
-                    node.material.color.setHex(0x888888);
-                    node.material.metalness = 0.95;
-                    node.material.roughness = 0.2;
-                    node.material.envMapIntensity = 2.0;
-                    node.material.emissive = new THREE.Color(0x000000);
-                    node.material.emissiveIntensity = 0;
-                }
+                node.material.envMapIntensity = 1.2;
                 node.material.needsUpdate = true;
                 node.castShadow = true;
                 node.receiveShadow = true;
