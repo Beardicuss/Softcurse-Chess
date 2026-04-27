@@ -196,9 +196,15 @@ export default function BattleChess3D() {
     function mkBurst(pos, col, sz = 0.07, N = 90) {
       const geo = new THREE.BufferGeometry();
       const arr = new Float32Array(N * 3);
-      const vel = Array.from({ length: N }, () =>
-        new THREE.Vector3((Math.random() - 0.5) * 0.22, Math.random() * 0.22 + 0.05, (Math.random() - 0.5) * 0.22));
-      for (let i = 0; i < N; i++) { arr[i * 3] = pos.x; arr[i * 3 + 1] = pos.y + 0.3; arr[i * 3 + 2] = pos.z; }
+      const vel = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        arr[i * 3] = pos.x;
+        arr[i * 3 + 1] = pos.y + 0.3;
+        arr[i * 3 + 2] = pos.z;
+        vel[i * 3] = (Math.random() - 0.5) * 0.22;
+        vel[i * 3 + 1] = Math.random() * 0.22 + 0.05;
+        vel[i * 3 + 2] = (Math.random() - 0.5) * 0.22;
+      }
       geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
       const mat = new THREE.PointsMaterial({ color: col, size: sz, transparent: true, opacity: 1 });
       const pts = new THREE.Points(geo, mat);
@@ -207,8 +213,10 @@ export default function BattleChess3D() {
         life += 0.04;
         const p = geo.attributes.position.array;
         for (let i = 0; i < N; i++) {
-          vel[i].y -= 0.006;
-          p[i * 3] += vel[i].x; p[i * 3 + 1] += vel[i].y; p[i * 3 + 2] += vel[i].z;
+          vel[i * 3 + 1] -= 0.006;
+          p[i * 3] += vel[i * 3];
+          p[i * 3 + 1] += vel[i * 3 + 1];
+          p[i * 3 + 2] += vel[i * 3 + 2];
         }
         geo.attributes.position.needsUpdate = true;
         mat.opacity = Math.max(0, 1 - life / 1.6);
@@ -219,8 +227,35 @@ export default function BattleChess3D() {
 
     // ── Highlights ───────────────────────────────────────────────
     const hlMeshes = [];
+    // Pre-create pools for highlight dots (max 28 legal moves per piece)
+    const DOT_POOL = Array.from({ length: 28 }, () => {
+      const m = new THREE.Mesh(
+        new THREE.CircleGeometry(0.18, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0xc5a059, transparent: true,
+          opacity: 0, side: THREE.DoubleSide
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.visible = false;
+      scene.add(m);
+      return m;
+    });
+    const RING_POOL = Array.from({ length: 28 }, () => {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(0.3, 0.44, 24),
+        new THREE.MeshBasicMaterial({
+          color: 0xc5a059, transparent: true,
+          opacity: 0, side: THREE.DoubleSide
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.visible = false;
+      scene.add(m);
+      return m;
+    });
     function clearHL() {
-      hlMeshes.forEach(m => scene.remove(m));
+      hlMeshes.forEach(m => { m.visible = false; m.material.opacity = 0; });
       hlMeshes.length = 0;
       for (let r = 0; r < 8; r++)
         for (let f = 0; f < 8; f++) {
@@ -247,14 +282,15 @@ export default function BattleChess3D() {
         sqMeshes[sel[0]][sel[1]].userData.mat.color.setHex(0x33ff66);
         sqMeshes[sel[0]][sel[1]].userData.mat.opacity = 0.3;
       }
+      let dotIdx = 0, ringIdx = 0;
       moves.forEach(([r, f]) => {
         const hasP = !!board[r][f];
-        const geo = hasP ? new THREE.RingGeometry(0.3, 0.44, 24) : new THREE.CircleGeometry(0.18, 20);
-        const mat = new THREE.MeshBasicMaterial({ color: 0xc5a059, transparent: true, opacity: 0.78, side: THREE.DoubleSide });
-        const dot = new THREE.Mesh(geo, mat);
+        const m = hasP ? RING_POOL[ringIdx++] : DOT_POOL[dotIdx++];
         const p2 = toWorld(r, f);
-        dot.position.set(p2.x, 0.04, p2.z); dot.rotation.x = -Math.PI / 2;
-        scene.add(dot); hlMeshes.push(dot);
+        m.position.set(p2.x, 0.04, p2.z);
+        m.material.opacity = 0.78;
+        m.visible = true;
+        hlMeshes.push(m);
       });
     }
 
@@ -360,7 +396,7 @@ export default function BattleChess3D() {
       return s;
     }
     function pushHistory(gs) {
-      historyRef.current.push({ gs: JSON.parse(JSON.stringify(gs)), pmSnap: snapPM() });
+      historyRef.current.push({ gs: structuredClone(gs), pmSnap: snapPM() });
     }
     function restoreSnap(snap) {
       Object.values(PM).forEach(m => scene.remove(m));
@@ -382,15 +418,24 @@ export default function BattleChess3D() {
       return `${ngs.turn === W ? "⚔  WHITE" : "⚔  BLACK"}'S TURN`;
     }
 
+    // ── AI Worker ────────────────────────────────────────────────
+    const aiWorker = new Worker(
+      new URL('./ai.worker.js', import.meta.url),
+      { type: 'module' }
+    );
+
     // ── AI turn ──────────────────────────────────────────────────
     function doAITurn() {
       animatingRef.current = true;
       aiPendingRef.current = true;
       setThinking(true);
-      setTimeout(() => {
+      aiWorker.postMessage({
+        gs: gsRef.current,
+        depth: DIFF_MAP[diffRef.current]
+      });
+      aiWorker.onmessage = ({ data: best }) => {
         if (destroyed || !aiPendingRef.current) return;
         aiPendingRef.current = false;
-        const best = getBestMove(gsRef.current, DIFF_MAP[diffRef.current]);
         setThinking(false);
         if (best) {
           animatingRef.current = false;
@@ -398,7 +443,7 @@ export default function BattleChess3D() {
         } else {
           animatingRef.current = false;
         }
-      }, 80);
+      };
     }
 
     // ── Execute a move ───────────────────────────────────────────

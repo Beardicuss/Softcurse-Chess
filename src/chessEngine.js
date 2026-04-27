@@ -75,12 +75,47 @@ export function findKing(board, c) {
 }
 
 export function attacked(board, r, f, byC) {
-    const nc = { w: { k: 0, q: 0 }, b: { k: 0, q: 0 } };
-    for (let sr = 0; sr < 8; sr++)
-        for (let sf = 0; sf < 8; sf++)
-            if (board[sr][sf]?.c === byC)
-                if (pseudoMoves(board, sr, sf, null, nc).some(([mr, mf]) => mr === r && mf === f))
-                    return true;
+    const opp = byC;
+    // Knight attacks
+    for (const [dr, df] of [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2]]) {
+        const sq = board[r + dr]?.[f + df];
+        if (sq?.c === opp && sq.t === "N") return true;
+    }
+    // Diagonal: bishops and queens
+    for (const [dr, df] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        let nr = r + dr, nf = f + df;
+        while (OB(nr, nf)) {
+            const sq = board[nr][nf];
+            if (sq) {
+                if (sq.c === opp && (sq.t === "B" || sq.t === "Q")) return true;
+                break;
+            }
+            nr += dr; nf += df;
+        }
+    }
+    // Rank/file: rooks and queens
+    for (const [dr, df] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        let nr = r + dr, nf = f + df;
+        while (OB(nr, nf)) {
+            const sq = board[nr][nf];
+            if (sq) {
+                if (sq.c === opp && (sq.t === "R" || sq.t === "Q")) return true;
+                break;
+            }
+            nr += dr; nf += df;
+        }
+    }
+    // Pawn attacks
+    const pd = opp === W ? 1 : -1;
+    for (const df of [-1, 1]) {
+        const sq = board[r + pd]?.[f + df];
+        if (sq?.c === opp && sq.t === "P") return true;
+    }
+    // King adjacency
+    for (const [dr, df] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const sq = board[r + dr]?.[f + df];
+        if (sq?.c === opp && sq.t === "K") return true;
+    }
     return false;
 }
 

@@ -2,8 +2,8 @@ import * as THREE from "three";
 // ═══════════════════════════════════════════════════════════════
 //  SHARED CONSTANTS
 // ═══════════════════════════════════════════════════════════════
-export const SZ = 1.12;
-export const OFF = -3.92;
+export const SZ = 0.504;  // 1.12 × 0.45 (board scale)
+export const OFF = -1.764; // -3.92 × 0.45 (board scale)
 export const toWorld = (r, f) => new THREE.Vector3(f * SZ + OFF, 0.05, r * SZ + OFF);
 export const SYM_W = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙" };
 export const SYM_B = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞", P: "♟" };
