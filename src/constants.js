@@ -4,7 +4,7 @@ import * as THREE from "three";
 // ═══════════════════════════════════════════════════════════════
 export const SZ = 0.504;  // 1.12 × 0.45 (board scale)
 export const OFF = -1.764; // -3.92 × 0.45 (board scale)
-export const toWorld = (r, f) => new THREE.Vector3(f * SZ + OFF, 0.05, r * SZ + OFF);
+export const toWorld = (r, f) => new THREE.Vector3(f * SZ + OFF, 0.0, r * SZ + OFF);
 export const SYM_W = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙" };
 export const SYM_B = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞", P: "♟" };
 export const DARK_SQ = 0x1a1a1a;
@@ -17,7 +17,7 @@ export const THEME = {
     boardBase: 0x111111,
     boardBorder: 0xcca35e,
     gridLine: 0xff00aa,
-    whiteAccent: 0x00ffff,
-    blackAccent: 0xff00aa,
+    whiteAccent: 0xfff7ef,
+    blackAccent: 0x7a3232,
     brass: "#c5a059",
 };

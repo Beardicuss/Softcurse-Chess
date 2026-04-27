@@ -7,7 +7,7 @@ const modelCache = {};
 
 const W_FILES = {
     P: "obj_003",
-    R: "obj_011",
+    R: "obj_005",
     N: "obj_002",
     B: "obj_001",
     Q: "obj_004",
@@ -16,7 +16,7 @@ const W_FILES = {
 
 const B_FILES = {
     P: "obj_009",
-    R: "obj_005",
+    R: "obj_011",
     N: "obj_008",
     B: "obj_006",
     Q: "obj_010",
@@ -66,8 +66,8 @@ function makeProcedural(type, color) {
         emissiveIntensity: isW ? 0.15 : 0.2, metalness: 0.9, roughness: 0.15
     });
     const aMat = () => new THREE.MeshStandardMaterial({
-        color: isW ? 0x00ffff : 0xff00aa,
-        emissive: isW ? 0x00ffff : 0xff00aa,
+        color: isW ? 0xfff7ef : 0x7a3232,
+        emissive: isW ? 0xfff7ef : 0x7a3232,
         emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.05
     });
     const add = (geo, mat, y = 0, rx = 0) => {
@@ -123,8 +123,8 @@ export function makePiece(type, color) {
     const isW = color === W;
 
     const accentMat = new THREE.MeshStandardMaterial({
-        color: isW ? 0x00ffff : 0xff00aa,
-        emissive: isW ? 0x00ffff : 0xff00aa,
+        color: isW ? 0xfff7ef : 0x7a3232,
+        emissive: isW ? 0xfff7ef : 0x7a3232,
         emissiveIntensity: 0.6,
         metalness: 0.9,
         roughness: 0.05,
@@ -144,7 +144,20 @@ export function makePiece(type, color) {
                 if (node.material) {
                     const mats = Array.isArray(node.material) ? node.material : [node.material];
                     mats.forEach(m => {
-                        m.envMapIntensity = 1.2;
+                        m.envMapIntensity = 0;
+                        // Increase roughness and reduce metalness to make them less dependent on reflections
+                        // and more responsive to direct scene lights
+                        if (m.roughness !== undefined) m.roughness = 0.8;
+                        if (m.metalness !== undefined) m.metalness = 0.1;
+                        
+                        // Slightly brighten the base color if it's very dark to reveal details
+                        if (m.color) {
+                            const hsl = {};
+                            m.color.getHSL(hsl);
+                            if (hsl.l < 0.2) { // If it's very dark (like the black pieces)
+                                m.color.setHSL(hsl.h, hsl.s, 0.25); // Lift the lightness slightly
+                            }
+                        }
                         m.needsUpdate = true;
                     });
                 }

@@ -71,10 +71,15 @@ function minimax(gs, depth, alpha, beta, max) {
 }
 
 export function getBestMove(gs, depth) {
-    let best = null, bv = Infinity;
+    const isWhite = gs.turn === W;
+    let best = null, bv = isWhite ? -Infinity : Infinity;
     for (const mv of orderMoves(gs, getAllMoves(gs))) {
-        const v = minimax(doMove(gs, ...mv), depth - 1, -Infinity, Infinity, true);
-        if (v < bv) { bv = v; best = mv; }
+        const v = minimax(doMove(gs, ...mv), depth - 1, -Infinity, Infinity, !isWhite);
+        if (isWhite) {
+            if (v > bv) { bv = v; best = mv; }
+        } else {
+            if (v < bv) { bv = v; best = mv; }
+        }
     }
     return best;
 }

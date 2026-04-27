@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { W } from "./chessEngine.js";
+import { W, B } from "./chessEngine.js";
 import { SYM_W, SYM_B } from "./constants.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -63,19 +63,21 @@ const STYLES = `
     position: relative;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 13px 28px;
+    gap: 20px;
+    padding: 18px 36px;
     cursor: pointer;
-    border: 1px solid transparent;
-    background: transparent;
-    color: rgba(197,160,89,0.6);
+    border: 1px solid rgba(197,160,89,0.1);
+    background: rgba(5,1,10,0.4);
+    color: rgba(197,160,89,0.75);
     font-family: 'Cinzel', serif;
-    font-size: 15px;
-    letter-spacing: 4px;
+    font-size: 20px;
+    letter-spacing: 6px;
     transition: all 0.25s ease;
     text-align: left;
     width: 100%;
     font-weight: 600;
+    margin-bottom: 12px;
+    backdrop-filter: blur(4px);
   }
 
   .menu-item::before {
@@ -86,7 +88,7 @@ const STYLES = `
     transform: translateY(-50%);
     width: 0;
     height: 100%;
-    background: linear-gradient(90deg, rgba(197,160,89,0.08), transparent);
+    background: linear-gradient(90deg, rgba(197,160,89,0.12), transparent);
     transition: width 0.3s ease;
   }
 
@@ -94,26 +96,28 @@ const STYLES = `
 
   .menu-item:hover {
     color: #c5a059;
-    border-color: rgba(197,160,89,0.25);
-    letter-spacing: 5px;
-    text-shadow: 0 0 12px rgba(197,160,89,0.4);
+    border-color: rgba(197,160,89,0.4);
+    letter-spacing: 7px;
+    text-shadow: 0 0 15px rgba(197,160,89,0.5);
+    transform: translateX(5px);
+    background: rgba(197,160,89,0.05);
   }
 
   .menu-item.disabled {
-    opacity: 0.3;
+    opacity: 0.2;
     cursor: not-allowed;
     pointer-events: none;
   }
 
   .menu-icon {
-    font-size: 16px;
-    opacity: 0.7;
-    min-width: 20px;
+    font-size: 24px;
+    opacity: 0.8;
+    min-width: 32px;
     transition: transform 0.25s ease;
   }
 
   .menu-item:hover .menu-icon {
-    transform: translateX(4px);
+    transform: scale(1.1);
     opacity: 1;
   }
 
@@ -161,7 +165,7 @@ const STYLES = `
 // ── Decorative crest SVG ─────────────────────────────────────
 function Crest() {
     return (
-        <svg width="180" height="180" viewBox="0 0 180 180" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "crestPulse 4s ease-in-out infinite", pointerEvents: "none" }}>
+        <svg width="220" height="220" viewBox="0 0 180 180" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", animation: "crestPulse 4s ease-in-out infinite", pointerEvents: "none" }}>
             <circle cx="90" cy="90" r="85" fill="none" stroke="rgba(197,160,89,0.3)" strokeWidth="0.5" strokeDasharray="4 6" />
             <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(197,160,89,0.15)" strokeWidth="0.5" />
             {[0, 45, 90, 135, 180, 225, 270, 315].map(a => (
@@ -179,27 +183,11 @@ function Crest() {
     );
 }
 
-// ── Animated corner ornament ─────────────────────────────────
-function Corner({ pos }) {
-    const style = {
-        position: "absolute",
-        width: 40, height: 40,
-        ...pos,
-        pointerEvents: "none",
-    };
-    const borders = {
-        topLeft: { borderTop: "1px solid rgba(197,160,89,0.5)", borderLeft: "1px solid rgba(197,160,89,0.5)", top: 0, left: 0 },
-        topRight: { borderTop: "1px solid rgba(197,160,89,0.5)", borderRight: "1px solid rgba(197,160,89,0.5)", top: 0, right: 0 },
-        bottomLeft: { borderBottom: "1px solid rgba(197,160,89,0.5)", borderLeft: "1px solid rgba(197,160,89,0.5)", bottom: 0, left: 0 },
-        bottomRight: { borderBottom: "1px solid rgba(197,160,89,0.5)", borderRight: "1px solid rgba(197,160,89,0.5)", bottom: 0, right: 0 },
-    };
-    return <div style={{ ...style, ...borders[Object.keys(pos)[0]] }} />;
-}
-
 // ── New Game sub-panel ───────────────────────────────────────
 function NewGamePanel({ onStart, onBack }) {
-    const [step, setStep] = useState("mode"); // "mode" | "difficulty"
+    const [step, setStep] = useState("mode"); // "mode" | "side" | "difficulty"
     const [mode, setMode] = useState(null);
+    const [side, setSide] = useState("w"); // "w" (Angels) | "b" (Demons)
     const [diff, setDiff] = useState("SOLDIER");
 
     const handleModeSelect = (m) => {
@@ -207,7 +195,7 @@ function NewGamePanel({ onStart, onBack }) {
         if (m === "pvp") {
             onStart({ mode: "pvp", diff: null });
         } else {
-            setStep("difficulty");
+            setStep("side");
         }
     };
 
@@ -215,19 +203,40 @@ function NewGamePanel({ onStart, onBack }) {
         <div className="sub-panel" style={{ width: "100%" }}>
             {step === "mode" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px", letterSpacing: "4px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center" }}>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
                         SELECT MODE
                     </div>
-                    <button className="menu-item" onClick={() => handleModeSelect("pvp")}>
-                        <span className="menu-icon">⚔</span>
-                        PLAYER VS PLAYER
-                    </button>
                     <button className="menu-item" onClick={() => handleModeSelect("ai")}>
                         <span className="menu-icon">🤖</span>
                         PLAYER VS AI
                     </button>
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.1)", margin: "12px 0" }} />
-                    <button className="menu-item" onClick={onBack} style={{ fontSize: "12px", opacity: 0.5 }}>
+                    <button className="menu-item" onClick={() => handleModeSelect("pvp")}>
+                        <span className="menu-icon">⚔</span>
+                        PLAYER VS PLAYER
+                    </button>
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                        <span className="menu-icon">←</span>
+                        BACK
+                    </button>
+                </>
+            )}
+
+            {step === "side" && (
+                <>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                        CHOOSE YOUR SIDE
+                    </div>
+                    <button className="menu-item" onClick={() => { setSide("w"); setStep("difficulty"); }}>
+                        <span className="menu-icon">👼</span>
+                        ANGELS (WHITE)
+                    </button>
+                    <button className="menu-item" onClick={() => { setSide("b"); setStep("difficulty"); }}>
+                        <span className="menu-icon">😈</span>
+                        DEMONS (BLACK)
+                    </button>
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
                         BACK
                     </button>
@@ -236,7 +245,7 @@ function NewGamePanel({ onStart, onBack }) {
 
             {step === "difficulty" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px", letterSpacing: "4px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center" }}>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
                         CHOOSE DIFFICULTY
                     </div>
 
@@ -250,58 +259,57 @@ function NewGamePanel({ onStart, onBack }) {
                             onClick={() => setDiff(key)}
                             style={{
                                 width: "100%",
-                                background: diff === key ? `${col}14` : "transparent",
-                                border: `1px solid ${diff === key ? col : "rgba(197,160,89,0.15)"}`,
-                                color: diff === key ? col : "rgba(197,160,89,0.5)",
-                                padding: "12px 20px",
-                                marginBottom: "8px",
-                                cursor: "pointer",
+                                background: diff === key ? `${col}18` : "rgba(5,1,10,0.4)",
+                                border: `1px solid ${diff === key ? col : "rgba(197,160,89,0.2)"}`,
+                                color: diff === key ? col : "rgba(197,160,89,0.65)",
+                                padding: "18px 28px",
+                                marginBottom: "12px",
                                 fontFamily: "'Cinzel', serif",
-                                letterSpacing: "2px",
-                                fontSize: "13px",
+                                letterSpacing: "4px",
+                                fontSize: "18px",
                                 textAlign: "left",
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "12px",
+                                gap: "20px",
                                 transition: "all 0.2s",
-                                boxShadow: diff === key ? `0 0 12px ${col}22` : "none",
+                                boxShadow: diff === key ? `0 0 20px ${col}33` : "none",
+                                cursor: "pointer",
+                                backdropFilter: "blur(4px)",
                             }}
                         >
-                            <span style={{ fontSize: "18px" }}>{icon}</span>
+                            <span style={{ fontSize: "26px" }}>{icon}</span>
                             <div>
-                                <div style={{ fontWeight: 600 }}>{key}</div>
-                                <div style={{ fontSize: "10px", opacity: 0.6, letterSpacing: "1px", marginTop: "2px" }}>{desc}</div>
+                                <div style={{ fontWeight: 700 }}>{key}</div>
+                                <div style={{ fontSize: "13px", opacity: 0.7, letterSpacing: "1.5px", marginTop: "4px" }}>{desc}</div>
                             </div>
-                            {diff === key && <span style={{ marginLeft: "auto", fontSize: "10px" }}>✦ SELECTED</span>}
+                            {diff === key && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ SELECTED</span>}
                         </button>
                     ))}
 
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.1)", margin: "12px 0" }} />
-
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button
-                        onClick={() => onStart({ mode: "ai", diff })}
+                        onClick={() => onStart({ mode: "ai", diff, side })}
                         style={{
                             width: "100%",
-                            background: "rgba(197,160,89,0.1)",
-                            border: "1px solid rgba(197,160,89,0.5)",
+                            background: "rgba(197,160,89,0.25)",
+                            border: "1px solid #c5a059",
                             color: "#c5a059",
-                            padding: "14px",
+                            padding: "22px",
                             cursor: "pointer",
                             fontFamily: "'Cinzel', serif",
-                            fontSize: "14px",
-                            letterSpacing: "4px",
+                            fontSize: "24px",
+                            letterSpacing: "6px",
                             fontWeight: 700,
-                            marginBottom: "8px",
+                            marginBottom: "12px",
                             transition: "all 0.2s",
-                            textShadow: "0 0 10px rgba(197,160,89,0.4)",
+                            textShadow: "0 0 15px rgba(197,160,89,0.6)",
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,0.2)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,0.1)"}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,0.35)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,0.25)"}
                     >
-                        ⚔ BEGIN BATTLE
+                        ⚔ START BATTLE
                     </button>
-
-                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "12px", opacity: 0.5 }}>
+                    <button className="menu-item" onClick={() => setStep("side")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
                         BACK
                     </button>
@@ -315,16 +323,16 @@ function NewGamePanel({ onStart, onBack }) {
 function CreditsPanel({ onBack }) {
     return (
         <div className="sub-panel" style={{ width: "100%", textAlign: "center" }}>
-            <div style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif" }}>CREDITS</div>
-            <div style={{ color: "rgba(197,160,89,0.7)", fontSize: "13px", lineHeight: 2.2, letterSpacing: "2px", fontFamily: "'Cinzel', serif" }}>
-                <div style={{ color: "#c5a059", fontSize: "15px", marginBottom: "4px" }}>SOFTCURSE LAB</div>
-                <div style={{ opacity: 0.5, fontSize: "11px", marginBottom: "20px" }}>SOLE DEVELOPER & DESIGNER</div>
-                <div style={{ opacity: 0.4, fontSize: "11px", letterSpacing: "1px" }}>3D Models — Creality Cloud Community</div>
-                <div style={{ opacity: 0.4, fontSize: "11px", letterSpacing: "1px" }}>Textures — AmbientCG (CC0)</div>
-                <div style={{ opacity: 0.4, fontSize: "11px", letterSpacing: "1px" }}>Engine — Three.js + React</div>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700 }}>CREDITS</div>
+            <div style={{ color: "rgba(197,160,89,0.8)", fontSize: "15px", lineHeight: 2.4, letterSpacing: "2.5px", fontFamily: "'Cinzel', serif" }}>
+                <div style={{ color: "#c5a059", fontSize: "18px", marginBottom: "6px", fontWeight: 700 }}>SOFTCURSE LAB</div>
+                <div style={{ opacity: 0.6, fontSize: "13px", marginBottom: "24px" }}>SOLE DEVELOPER & DESIGNER</div>
+                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>3D Models — Creality Cloud Community</div>
+                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>Textures — AmbientCG (CC0)</div>
+                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>Engine — Three.js + React</div>
             </div>
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.1)", margin: "20px 0" }} />
-            <button className="menu-item" onClick={onBack} style={{ fontSize: "12px", opacity: 0.5, justifyContent: "center" }}>
+            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "30px 0" }} />
+            <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, justifyContent: "center", border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
                 BACK
             </button>
@@ -344,15 +352,15 @@ function HowToPlayPanel({ onBack }) {
     ];
     return (
         <div className="sub-panel" style={{ width: "100%" }}>
-            <div style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px", letterSpacing: "4px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center" }}>HOW TO PLAY</div>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>HOW TO PLAY</div>
             {tips.map(([key, val]) => (
-                <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "8px 16px", borderBottom: "1px solid rgba(197,160,89,0.07)", fontFamily: "'Cinzel', serif" }}>
-                    <span style={{ color: "#c5a059", fontSize: "11px", letterSpacing: "2px" }}>{key}</span>
-                    <span style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px" }}>{val}</span>
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "12px 20px", borderBottom: "1px solid rgba(197,160,89,0.1)", fontFamily: "'Cinzel', serif" }}>
+                    <span style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "2.5px", fontWeight: 700 }}>{key}</span>
+                    <span style={{ color: "rgba(197,160,89,0.6)", fontSize: "13px" }}>{val}</span>
                 </div>
             ))}
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.1)", margin: "12px 0" }} />
-            <button className="menu-item" onClick={onBack} style={{ fontSize: "12px", opacity: 0.5 }}>
+            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
+            <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
                 BACK
             </button>
@@ -364,38 +372,38 @@ function HowToPlayPanel({ onBack }) {
 function SettingsPanel({ onBack }) {
     return (
         <div className="sub-panel" style={{ width: "100%" }}>
-            <div style={{ color: "rgba(197,160,89,0.4)", fontSize: "11px", letterSpacing: "4px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center" }}>SETTINGS</div>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>SETTINGS</div>
 
-            <div style={{ marginBottom: "15px" }}>
-                <div style={{ color: "#c5a059", fontSize: "11px", letterSpacing: "2px", marginBottom: "8px" }}>AUDIO</div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ color: "rgba(197,160,89,0.7)", fontSize: "11px" }}>MASTER</span>
-                    <input type="range" min="0" max="100" defaultValue="100" style={{ width: "100px", accentColor: "#c5a059" }} />
+            <div style={{ marginBottom: "20px" }}>
+                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>AUDIO</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>MASTER</span>
+                    <input type="range" min="0" max="100" defaultValue="100" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ color: "rgba(197,160,89,0.7)", fontSize: "11px" }}>MUSIC</span>
-                    <input type="range" min="0" max="100" defaultValue="80" style={{ width: "100px", accentColor: "#c5a059" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>MUSIC</span>
+                    <input type="range" min="0" max="100" defaultValue="80" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "rgba(197,160,89,0.7)", fontSize: "11px" }}>SFX</span>
-                    <input type="range" min="0" max="100" defaultValue="100" style={{ width: "100px", accentColor: "#c5a059" }} />
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>SFX</span>
+                    <input type="range" min="0" max="100" defaultValue="100" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
             </div>
 
-            <div style={{ marginBottom: "15px" }}>
-                <div style={{ color: "#c5a059", fontSize: "11px", letterSpacing: "2px", marginBottom: "8px" }}>LANGUAGE</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ marginBottom: "20px" }}>
+                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>LANGUAGE</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     {["ENGLISH", "РУССКИЙ", "ქართული"].map((l, i) => (
-                        <label key={l} style={{ display: "flex", alignItems: "center", gap: "8px", color: "rgba(197,160,89,0.7)", fontSize: "11px", cursor: "pointer" }}>
-                            <input type="radio" name="lang" defaultChecked={i === 0} style={{ accentColor: "#c5a059" }} />
+                        <label key={l} style={{ display: "flex", alignItems: "center", gap: "12px", color: "rgba(197,160,89,0.8)", fontSize: "13px", cursor: "pointer" }}>
+                            <input type="radio" name="lang" defaultChecked={i === 0} style={{ accentColor: "#c5a059", width: "16px", height: "16px" }} />
                             {l}
                         </label>
                     ))}
                 </div>
             </div>
 
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.1)", margin: "12px 0" }} />
-            <button className="menu-item" onClick={onBack} style={{ fontSize: "12px", opacity: 0.5 }}>
+            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
+            <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
                 BACK
             </button>
@@ -427,12 +435,12 @@ function MainMenu({ onStart, hasSave }) {
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 50,
-            background: "radial-gradient(ellipse at center, rgba(5,1,10,0.65) 0%, rgba(5,1,10,0.88) 100%)",
-            backdropFilter: "blur(2px)",
+            background: "radial-gradient(ellipse at center, rgba(5,1,10,0.7) 0%, rgba(5,1,10,0.92) 100%)",
+            backdropFilter: "blur(3px)",
         }}>
             <div style={{
                 position: "relative",
-                width: 380,
+                width: 440,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -440,50 +448,51 @@ function MainMenu({ onStart, hasSave }) {
                 transition: "opacity 0.6s ease",
             }}>
                 {/* Decorative background crest */}
-                <div style={{ position: "relative", width: 180, height: 180, marginBottom: -60 }}>
+                <div style={{ position: "relative", width: 220, height: 220, marginBottom: -80 }}>
                     <Crest />
                 </div>
 
                 {/* Title block */}
-                <div style={{ textAlign: "center", marginBottom: "42px", position: "relative", zIndex: 1 }}>
+                <div style={{ textAlign: "center", marginBottom: "50px", position: "relative", zIndex: 1 }}>
                     <div style={{
                         fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "48px",
+                        fontSize: "72px",
                         fontWeight: 900,
                         color: "#c5a059",
-                        letterSpacing: "3px",
+                        letterSpacing: "8px",
                         animation: "titleGlow 3s ease-in-out infinite",
-                        lineHeight: 1.2,
+                        lineHeight: 1.1,
                     }}>
                         SOFTCURSE'S
                     </div>
                     <div style={{
                         fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "64px",
+                        fontSize: "96px",
                         fontWeight: 900,
                         color: "#e0c88a",
-                        letterSpacing: "2px",
+                        letterSpacing: "6px",
                         animation: "titleGlow 3s ease-in-out infinite",
-                        lineHeight: 1.1,
+                        lineHeight: 1.0,
                     }}>
                         CHESS
                     </div>
                     <div style={{
                         fontFamily: "'Cinzel', serif",
-                        fontSize: "14px",
-                        color: "rgba(197,160,89,0.8)",
-                        letterSpacing: "8px",
-                        marginTop: "16px",
+                        fontSize: "22px",
+                        color: "rgba(197,160,89,0.85)",
+                        letterSpacing: "12px",
+                        marginTop: "24px",
                         animation: "subtitlePulse 4s ease-in-out infinite",
+                        fontWeight: 700,
                     }}>
                         ANGELS VS DEMONS
                     </div>
 
                     {/* Decorative line */}
-                    <div style={{ position: "relative", height: "1px", margin: "16px 0", overflow: "hidden" }}>
+                    <div style={{ position: "relative", height: "1px", margin: "24px 0", overflow: "hidden" }}>
                         <div style={{
                             position: "absolute", left: "50%", transform: "translateX(-50%)",
-                            height: "1px", background: "linear-gradient(90deg, transparent, rgba(197,160,89,0.6), transparent)",
+                            height: "1px", background: "linear-gradient(90deg, transparent, rgba(197,160,89,0.7), transparent)",
                             animation: visible ? "lineExpand 1s ease forwards" : "none",
                             width: "100%",
                         }} />
@@ -494,7 +503,7 @@ function MainMenu({ onStart, hasSave }) {
                 <div style={{
                     position: "relative",
                     width: "100%",
-                    padding: "8px 0",
+                    padding: "10px 0",
                 }}>
                     {/* Main menu items */}
                     {panel === "main" && MENU_ITEMS.map(({ label, icon, panel: p, delay, disabled }) => (
@@ -513,7 +522,7 @@ function MainMenu({ onStart, hasSave }) {
                         >
                             <span className="menu-icon">{icon}</span>
                             {label}
-                            {disabled && <span style={{ marginLeft: "auto", fontSize: "10px", opacity: 0.4 }}>NO SAVE</span>}
+                            {disabled && <span style={{ marginLeft: "auto", fontSize: "12px", opacity: 0.4 }}>NO SAVE</span>}
                         </button>
                     ))}
 
@@ -525,13 +534,14 @@ function MainMenu({ onStart, hasSave }) {
                 </div>
 
                 <div style={{
-                    marginTop: "16px",
+                    marginTop: "24px",
                     fontFamily: "'Cinzel', serif",
-                    fontSize: "10px",
-                    color: "rgba(197,160,89,0.2)",
-                    letterSpacing: "3px",
+                    fontSize: "12px",
+                    color: "rgba(197,160,89,0.3)",
+                    letterSpacing: "4px",
+                    fontWeight: 600,
                 }}>
-                    SOFTCURSE LAB © 2025
+                    SOFTCURSE STUDIO © 2026
                 </div>
             </div>
         </div>
@@ -687,8 +697,6 @@ export default function ChessUI({
                         </div>
                     </div>
 
-
-
                     {/* Move Log Panel */}
                     <div style={{ position: "absolute", top: "50%", left: 0, transform: "translateY(-50%)", display: "flex", alignItems: "center", zIndex: 10 }}>
                         <button onClick={() => setLogOpen(o => !o)} style={{ background: "rgba(5,1,10,.88)", border: "1px solid rgba(197,160,89,.3)", borderLeft: "none", color: "#c5a059", padding: "16px 6px", fontSize: "11px", letterSpacing: "3px", cursor: "pointer", fontFamily: "'Cinzel Decorative', serif", writingMode: "vertical-rl", textOrientation: "mixed", lineHeight: 1 }}>
@@ -700,20 +708,12 @@ export default function ChessUI({
                                     <span style={{ color: "rgba(197,160,89,.6)", fontSize: "12px", letterSpacing: "2.5px", fontFamily: "'Cinzel Decorative', serif" }}>MOVE LOG</span>
                                     <span style={{ color: "rgba(197,160,89,.3)", fontSize: "11px" }}>{moveLog.length} pairs</span>
                                 </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr", padding: "5px 12px", borderBottom: "1px solid rgba(197,160,89,.1)" }}>
-                                    <span style={{ color: "rgba(197,160,89,.3)", fontSize: "11px" }}>#</span>
-                                    <span style={{ color: "rgba(239,230,160,.9)", fontWeight: "bold", textShadow: "0 0 8px rgba(239,230,160,0.6)", fontSize: "11px" }}>⬜ WHITE</span>
-                                    <span style={{ color: "rgba(95,5,5,1)", fontWeight: "bold", textShadow: "0 0 8px rgba(255,0,0,0.8)", fontSize: "11px" }}>⬛ BLACK</span>
-                                </div>
-                                <div ref={logRef} style={{ overflowY: "auto", flex: 1, padding: "4px 0" }}>
-                                    {moveLog.length === 0 && (
-                                        <div style={{ color: "rgba(197,160,89,.2)", fontSize: "12px", textAlign: "center", padding: "16px" }}>no moves yet</div>
-                                    )}
-                                    {moveLog.map((pair, i) => (
-                                        <div key={i} style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr", padding: "4px 12px", background: i % 2 === 0 ? "transparent" : "rgba(197,160,89,.04)" }}>
-                                            <span style={{ color: "rgba(197,160,89,.3)", fontSize: "13px" }}>{i + 1}.</span>
-                                            <span style={{ color: "rgba(239,230,160,1)", fontSize: "13px", fontWeight: "bold", textShadow: "0 0 8px rgba(239,230,160,0.5)" }}>{pair.w || ""}</span>
-                                            <span style={{ color: "rgba(95,5,5,1)", fontSize: "13px", fontWeight: "bold", textShadow: "0 0 8px rgba(255,0,0,0.6)" }}>{pair.b || ""}</span>
+                                <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "10px 14px" }}>
+                                    {moveLog.map((m, i) => (
+                                        <div key={i} style={{ display: "flex", fontSize: "12px", letterSpacing: "1px", marginBottom: "6px", fontFamily: "monospace" }}>
+                                            <span style={{ color: "rgba(197,160,89,.3)", width: 30 }}>{i + 1}.</span>
+                                            <span style={{ color: "#efe6a0", width: 80 }}>{m.w}</span>
+                                            <span style={{ color: "#7a3232" }}>{m.b || "..."}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -722,65 +722,33 @@ export default function ChessUI({
                     </div>
 
                     {/* Captured pieces */}
-                    <div style={{ position: "absolute", bottom: 20, left: 20, pointerEvents: "none", animation: "hudSlideUp 0.5s ease forwards" }}>
-                        <div style={{ color: "rgba(239,230,160,.9)", fontWeight: "bold", textShadow: "0 0 8px rgba(239,230,160,.7)", fontSize: "11px", letterSpacing: "2.5px", marginBottom: "5px", fontFamily: "'Cinzel Decorative', serif" }}>CAPTURED BY WHITE</div>
-                        <div style={{ color: "#efe6a0", fontSize: "26px", lineHeight: 1, textShadow: "0 0 10px rgba(239,230,160,.8)", minHeight: "28px" }}>
-                            {caps.w.map((t, i) => <span key={i} style={{ marginRight: "2px" }}>{SYM_W[t]}</span>)}
+                    <div style={{ position: "absolute", bottom: 20, left: 20, display: "flex", flexDirection: "column", gap: 10, animation: "hudSlideUp 0.5s ease forwards" }}>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 200 }}>
+                            {caps.w.map((t, i) => <span key={i} style={{ color: "#c5a059", fontSize: "20px", textShadow: "0 0 8px rgba(197,160,89,.4)" }}>{SYM_W[t]}</span>)}
                         </div>
-                    </div>
-                    <div style={{ position: "absolute", bottom: 20, right: 20, textAlign: "right", pointerEvents: "none", animation: "hudSlideUp 0.5s ease forwards" }}>
-                        <div style={{ color: "rgba(95,5,5,1)", fontWeight: "bold", textShadow: "0 0 10px rgba(255,0,0,.7)", fontSize: "11px", letterSpacing: "2.5px", marginBottom: "5px", fontFamily: "'Cinzel Decorative', serif" }}>CAPTURED BY BLACK</div>
-                        <div style={{ color: "#5f0505", fontSize: "26px", lineHeight: 1, textShadow: "0 0 10px rgba(255,0,0,.8)", minHeight: "28px" }}>
-                            {caps.b.map((t, i) => <span key={i} style={{ marginRight: "2px" }}>{SYM_B[t]}</span>)}
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 200 }}>
+                            {caps.b.map((t, i) => <span key={i} style={{ color: "#7a3232", fontSize: "20px", textShadow: "0 0 8px rgba(122,50,50,.4)" }}>{SYM_B[t]}</span>)}
                         </div>
                     </div>
 
-                    {/* Instructions */}
-                    <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", textAlign: "center", pointerEvents: "none" }}>
-                        <div style={{ color: "rgba(197,160,89,.9)", fontWeight: "bold", textShadow: "0 0 8px rgba(197,160,89,.5)", fontSize: "11px", letterSpacing: "2.5px", fontFamily: "'Cinzel', serif" }}>
-                            CLICK PIECE → SELECT &nbsp;·&nbsp; CLICK DOT → MOVE &nbsp;·&nbsp; RIGHT DRAG → ORBIT
+                    {/* Promotion modal */}
+                    {promoModal && (
+                        <div style={{ position: "absolute", inset: 0, background: "rgba(5,1,10,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+                            <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid #c5a059", padding: 30, textAlign: "center" }}>
+                                <div style={{ color: "#c5a059", fontSize: "18px", letterSpacing: "4px", marginBottom: 25, fontFamily: "'Cinzel Decorative', serif" }}>PAWN PROMOTION</div>
+                                <div style={{ display: "flex", gap: 15 }}>
+                                    {PROMO_OPTS.map(o => (
+                                        <button key={o.t} onClick={() => window._battleChessPromoChoice?.(o.t)} style={{ background: "rgba(197,160,89,.1)", border: "1px solid rgba(197,160,89,.3)", color: "#c5a059", padding: "15px 20px", cursor: "pointer", transition: "all .2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,.25)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,.1)"}>
+                                            <div style={{ fontSize: 32, marginBottom: 5 }}>{o.sym[promoModal.color === W ? 0 : 1]}</div>
+                                            <div style={{ fontSize: 10, letterSpacing: 2 }}>{o.label}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </>
             )}
-
-            {/* ── Promotion Modal ───────────────────────────────── */}
-            {promoModal && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(3px)" }}>
-                    <div style={{ position: "relative", background: "rgba(5,1,10,.97)", border: "1px solid rgba(197,160,89,.4)", padding: "28px 32px", textAlign: "center", boxShadow: "0 0 40px rgba(197,160,89,.15)" }}>
-                        <div style={{ color: "rgba(197,160,89,.55)", fontSize: "13px", letterSpacing: "4px", marginBottom: "6px", fontFamily: "'Cinzel Decorative', serif" }}>PROMOTION</div>
-                        <div style={{ color: "#e0f0ff", fontSize: "18px", letterSpacing: "3px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif" }}>CHOOSE YOUR PIECE</div>
-                        {["topLeft", "topRight", "bottomLeft", "bottomRight"].map(k => (
-                            <div key={k} style={{
-                                position: "absolute", width: 12, height: 12,
-                                ...(k === "topLeft" ? { top: 8, left: 8, borderTop: "1px solid rgba(197,160,89,.5)", borderLeft: "1px solid rgba(197,160,89,.5)" } : {}),
-                                ...(k === "topRight" ? { top: 8, right: 8, borderTop: "1px solid rgba(197,160,89,.5)", borderRight: "1px solid rgba(197,160,89,.5)" } : {}),
-                                ...(k === "bottomLeft" ? { bottom: 8, left: 8, borderBottom: "1px solid rgba(197,160,89,.5)", borderLeft: "1px solid rgba(197,160,89,.5)" } : {}),
-                                ...(k === "bottomRight" ? { bottom: 8, right: 8, borderBottom: "1px solid rgba(197,160,89,.5)", borderRight: "1px solid rgba(197,160,89,.5)" } : {}),
-                            }} />
-                        ))}
-                        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                            {PROMO_OPTS.map(({ t, sym, label }) => {
-                                const isW = promoModal.color === W;
-                                const col = isW ? "#efe6a0" : "#5f0505";
-                                const shadow = isW ? "rgba(239,230,160,.3)" : "rgba(95,5,5,.3)";
-                                return (
-                                    <button key={t} onClick={() => promoModal.resolve(t)}
-                                        style={{ background: "transparent", border: `1px solid ${col}44`, color: col, padding: "14px 16px", cursor: "pointer", fontFamily: "'Cinzel', serif", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", transition: "all .18s", minWidth: 64 }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = `${col}14`; e.currentTarget.style.borderColor = col; e.currentTarget.style.boxShadow = `0 0 14px ${shadow}`; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = `${col}44`; e.currentTarget.style.boxShadow = "none"; }}>
-                                        <span style={{ fontSize: "34px", lineHeight: 1, textShadow: `0 0 8px ${shadow}` }}>{sym[isW ? 0 : 1]}</span>
-                                        <span style={{ fontSize: "11px", letterSpacing: "2px", opacity: 0.6 }}>{label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* CRT scanline overlay */}
-            <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)", pointerEvents: "none", opacity: 0.4 }} />
         </div>
     );
 }
