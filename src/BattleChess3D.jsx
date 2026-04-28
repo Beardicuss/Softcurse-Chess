@@ -481,6 +481,10 @@ export default function BattleChess3D() {
           try {
             const sgs = JSON.parse(saved); gsRef.current = sgs; modeRef.current = "ai"; setModeFixed("ai");
             spawnAll(gsRef.current.board); clearHL(); setMsg(statusMsg(sgs, sgs.turn === W ? B : W)); setCaps({ w: sgs.capW, b: sgs.capB });
+            // If it's the AI's turn on load, kick off the AI
+            if (sgs.turn !== playerSideRef.current && (sgs.status === "playing" || sgs.status === "check")) {
+              setTimeout(() => doAITurn(), 500);
+            }
           } catch (e) { window._battleChessReset?.(); }
         } else window._battleChessReset?.();
       }
