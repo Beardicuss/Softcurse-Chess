@@ -277,41 +277,81 @@ export default function BattleChess3D() {
       return gs.status === "check" ? `⚠️ ${turnName} IN CHECK` : `⚔  ${turnName}'S TURN`;
     }
 
-    function doAITurn() {
-      if (aiPendingRef.current) { console.warn("[doAITurn] BLOCKED — aiPendingRef still true"); return; }
+    function doAITurn(retries = 0) {
+      const MAX_RETRIES = 2;
+      if (aiPendingRef.current && retries === 0) { console.warn("[doAITurn] BLOCKED — aiPendingRef still true"); return; }
       if (animatingRef.current) { console.warn("[doAITurn] BLOCKED — animatingRef still true"); return; }
       const g = gsRef.current;
       if (g.status !== "playing" && g.status !== "check") { console.warn("[doAITurn] BLOCKED — game status:", g.status); return; }
       aiPendingRef.current = true; setThinking(true);
-      console.log("[doAITurn] Requesting neural move...", "turn:", g.turn, "mode:", modeRef.current);
+      console.log(`[doAITurn] Requesting neural move (attempt ${retries + 1})...`, "turn:", g.turn);
 
       getNeuralMove(g, diffRef.current).then(result => {
-        setThinking(false); aiPendingRef.current = false;
         if (result && result.move) {
           const [fr, ff, tr, tf, promo] = result.move;
           const piece = g.board[fr]?.[ff];
           console.log("[doAITurn] Got move:", result.move, "provider:", result.provider, "piece:", piece);
 
-          // Validate: piece exists, belongs to AI, and move is legal
+          // Validate: piece exists and belongs to AI
           if (!piece || piece.c !== g.turn) {
-            console.error("[doAITurn] INVALID — no piece or wrong color at", fr, ff, "piece:", piece, "turn:", g.turn);
-            return;
+            console.error("[doAITurn] INVALID — no piece or wrong color at", fr, ff);
+            if (retries < MAX_RETRIES) {
+              console.log("[doAITurn] Retrying...");
+              setTimeout(() => doAITurn(retries + 1), 300);
+              return;
+            }
+            console.warn("[doAITurn] Max retries exhausted, falling back to random legal move");
+            playRandomLegal(g); return;
           }
+
+          // Validate: move is legal
           const legal = legalMoves(g, fr, ff);
           const isLegal = legal.some(([lr, lf]) => lr === tr && lf === tf);
           if (!isLegal) {
-            console.error("[doAITurn] ILLEGAL move:", fr, ff, "→", tr, tf, "legal moves:", legal);
-            return;
+            console.error("[doAITurn] ILLEGAL move:", fr, ff, "→", tr, tf);
+            if (retries < MAX_RETRIES) {
+              console.log("[doAITurn] Retrying...");
+              setTimeout(() => doAITurn(retries + 1), 300);
+              return;
+            }
+            console.warn("[doAITurn] Max retries exhausted, falling back to random legal move");
+            playRandomLegal(g); return;
           }
 
+          setThinking(false); aiPendingRef.current = false;
           executeMove(fr, ff, tr, tf, promo);
         } else {
-          console.warn("[Neural AI] All providers failed for this move");
+          console.warn("[Neural AI] All providers failed");
+          if (retries < MAX_RETRIES) {
+            setTimeout(() => doAITurn(retries + 1), 500);
+            return;
+          }
+          console.warn("[doAITurn] Falling back to random legal move");
+          playRandomLegal(g);
         }
       }).catch(err => {
         console.error("[doAITurn] CRASH:", err);
-        setThinking(false); aiPendingRef.current = false;
+        if (retries < MAX_RETRIES) {
+          setTimeout(() => doAITurn(retries + 1), 500);
+          return;
+        }
+        playRandomLegal(g);
       });
+    }
+
+    function playRandomLegal(g) {
+      setThinking(false); aiPendingRef.current = false;
+      // Collect all legal moves for the current turn
+      const allMoves = [];
+      for (let r = 0; r < 8; r++)
+        for (let f = 0; f < 8; f++)
+          if (g.board[r][f]?.c === g.turn)
+            for (const [tr, tf] of legalMoves(g, r, f))
+              allMoves.push([r, f, tr, tf]);
+      if (allMoves.length === 0) { console.error("[playRandomLegal] No legal moves!"); return; }
+      const pick = allMoves[Math.floor(Math.random() * allMoves.length)];
+      console.log("[playRandomLegal] Playing fallback:", pick);
+      executeMove(...pick);
     }
 
     function executeMove(fr, ff, tr, tf, chosenPromo = "Q") {
