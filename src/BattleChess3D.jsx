@@ -278,16 +278,24 @@ export default function BattleChess3D() {
     }
 
     function doAITurn() {
-      if (aiPendingRef.current) return;
+      if (aiPendingRef.current) { console.warn("[doAITurn] BLOCKED — aiPendingRef still true"); return; }
+      if (animatingRef.current) { console.warn("[doAITurn] BLOCKED — animatingRef still true"); return; }
+      const g = gsRef.current;
+      if (g.status !== "playing" && g.status !== "check") { console.warn("[doAITurn] BLOCKED — game status:", g.status); return; }
       aiPendingRef.current = true; setThinking(true);
+      console.log("[doAITurn] Requesting neural move...", "turn:", g.turn, "mode:", modeRef.current);
 
-      getNeuralMove(gsRef.current, diffRef.current).then(result => {
+      getNeuralMove(g, diffRef.current).then(result => {
         setThinking(false); aiPendingRef.current = false;
         if (result && result.move) {
+          console.log("[doAITurn] Got move:", result.move, "provider:", result.provider);
           executeMove(...result.move);
         } else {
           console.warn("[Neural AI] All providers failed for this move");
         }
+      }).catch(err => {
+        console.error("[doAITurn] CRASH:", err);
+        setThinking(false); aiPendingRef.current = false;
       });
     }
 
@@ -338,6 +346,7 @@ export default function BattleChess3D() {
           } else setMoveLog(ml => [...ml, { w: "—", b: note }]);
         }
         if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(ngs));
+        console.log("[finish] mode:", modeRef.current, "turn:", ngs.turn, "playerSide:", playerSideRef.current, "status:", ngs.status, "aiPending:", aiPendingRef.current, "animating:", animatingRef.current);
         if (modeRef.current === "ai" && ngs.turn !== playerSideRef.current && (ngs.status === "playing" || ngs.status === "check")) doAITurn();
       };
       if (wasEP) {
