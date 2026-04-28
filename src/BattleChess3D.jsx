@@ -288,8 +288,23 @@ export default function BattleChess3D() {
       getNeuralMove(g, diffRef.current).then(result => {
         setThinking(false); aiPendingRef.current = false;
         if (result && result.move) {
-          console.log("[doAITurn] Got move:", result.move, "provider:", result.provider);
-          executeMove(...result.move);
+          const [fr, ff, tr, tf, promo] = result.move;
+          const piece = g.board[fr]?.[ff];
+          console.log("[doAITurn] Got move:", result.move, "provider:", result.provider, "piece:", piece);
+
+          // Validate: piece exists, belongs to AI, and move is legal
+          if (!piece || piece.c !== g.turn) {
+            console.error("[doAITurn] INVALID — no piece or wrong color at", fr, ff, "piece:", piece, "turn:", g.turn);
+            return;
+          }
+          const legal = legalMoves(g, fr, ff);
+          const isLegal = legal.some(([lr, lf]) => lr === tr && lf === tf);
+          if (!isLegal) {
+            console.error("[doAITurn] ILLEGAL move:", fr, ff, "→", tr, tf, "legal moves:", legal);
+            return;
+          }
+
+          executeMove(fr, ff, tr, tf, promo);
         } else {
           console.warn("[Neural AI] All providers failed for this move");
         }
