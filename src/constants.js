@@ -9,7 +9,7 @@ export const SYM_W = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙
 export const SYM_B = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞", P: "♟" };
 export const DARK_SQ = 0x1a1a1a;
 export const LIGHT_SQ = 0xd2c1a5;
-export const DIFF_MAP = { RECRUIT: 2, SOLDIER: 3, COMMANDER: 4 };
+export const DIFF_MAP = { RECRUIT: 2, SOLDIER: 3, COMMANDER: 4, GRANDMASTER: 0 };
 // ── Theme colors ──────────────────────────────────────────────
 export const THEME = {
     bg: 0x0a0a0c,

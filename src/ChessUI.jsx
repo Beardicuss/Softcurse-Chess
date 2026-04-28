@@ -194,6 +194,8 @@ function NewGamePanel({ onStart, onBack }) {
         setMode(m);
         if (m === "pvp") {
             onStart({ mode: "pvp", diff: null });
+        } else if (m === "ai_vs_ai") {
+            onStart({ mode: "ai_vs_ai", diff: "GRANDMASTER" });
         } else {
             setStep("side");
         }
@@ -213,6 +215,10 @@ function NewGamePanel({ onStart, onBack }) {
                     <button className="menu-item" onClick={() => handleModeSelect("pvp")}>
                         <span className="menu-icon">⚔</span>
                         PLAYER VS PLAYER
+                    </button>
+                    <button className="menu-item" onClick={() => handleModeSelect("ai_vs_ai")}>
+                        <span className="menu-icon">📽</span>
+                        AI VS AI
                     </button>
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
@@ -253,6 +259,7 @@ function NewGamePanel({ onStart, onBack }) {
                         { key: "RECRUIT", icon: "🌿", desc: "Casual — for learning", col: "#00ffff" },
                         { key: "SOLDIER", icon: "⚔", desc: "Balanced — fair challenge", col: "#c5a059" },
                         { key: "COMMANDER", icon: "💀", desc: "Brutal — may take 3–8s/move", col: "#ff0044" },
+                        { key: "GRANDMASTER", icon: "🧠", desc: "Cloud AI — real neural engine", col: "#bf5af2" },
                     ].map(({ key, icon, desc, col }) => (
                         <button
                             key={key}

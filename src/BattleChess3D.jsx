@@ -5,10 +5,10 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // ── Module imports ──────────────────────────────────────────────
 import { W, B, initGame, findKing, legalMoves, doMove } from "./chessEngine.js";
-import { getBestMove } from "./aiEngine.js";
+import { getNeuralMove } from "./aiEngine.js";
 import { makePiece } from "./pieceFactory.js";
 import { AudioEngine } from "./audioEngine.js";
-import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, DIFF_MAP, THEME } from "./constants.js";
+import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
 import { createGalaxyBackground } from "./galaxyBackground.js";
 
@@ -280,12 +280,15 @@ export default function BattleChess3D() {
     function doAITurn() {
       if (aiPendingRef.current) return;
       aiPendingRef.current = true; setThinking(true);
-      const depth = DIFF_MAP[diffRef.current] || 3;
-      setTimeout(() => {
-        const mv = getBestMove(gsRef.current, depth);
+
+      getNeuralMove(gsRef.current, diffRef.current).then(result => {
         setThinking(false); aiPendingRef.current = false;
-        if (mv) executeMove(...mv);
-      }, 500);
+        if (result && result.move) {
+          executeMove(...result.move);
+        } else {
+          console.warn("[Neural AI] All providers failed for this move");
+        }
+      });
     }
 
     function executeMove(fr, ff, tr, tf, chosenPromo = "Q") {
@@ -350,6 +353,7 @@ export default function BattleChess3D() {
       const g = gsRef.current;
       if (g.status === "checkmate" || g.status === "stalemate") return;
       if (modeRef.current === "ai" && g.turn !== playerSideRef.current) return;
+      if (modeRef.current === "ai_vs_ai") return; // Spectator mode — no interaction
       if (g.sel) {
         const [sr, sf] = g.sel;
         if ((g.lm || []).some(([lr, lf]) => lr === r && lf === f)) { gsRef.current = { ...g, sel: null, lm: [] }; executeMove(sr, sf, r, f); }
@@ -442,6 +446,26 @@ export default function BattleChess3D() {
         }
         window._battleChessReset?.();
         if (modeRef.current === "ai" && playerSideRef.current === B) doAITurn();
+        // AI vs AI spectator loop
+        if (modeRef.current === "ai_vs_ai") {
+          const spectatorLoop = async () => {
+            await new Promise(r => setTimeout(r, 1000));
+            while (gsRef.current.status === "playing" || gsRef.current.status === "check") {
+              if (!gameStartedRef.current) break;
+              aiPendingRef.current = true; setThinking(true);
+              const result = await getNeuralMove(gsRef.current, "GRANDMASTER");
+              setThinking(false); aiPendingRef.current = false;
+              if (result && result.move) {
+                executeMove(...result.move);
+              } else {
+                console.warn("[AI vs AI] Providers failed, stopping");
+                break;
+              }
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          };
+          spectatorLoop();
+        }
       } else {
         const saved = localStorage.getItem("battleChessSave");
         if (saved) {
@@ -458,7 +482,7 @@ export default function BattleChess3D() {
     window._battleChessExitToMenu = () => { gameStartedRef.current = false; setGameStarted(false); };
     window._battleChessUndo = () => {
       if (animatingRef.current || historyRef.current.length === 0) return;
-      
+
       const undoOnce = () => {
         if (historyRef.current.length === 0) return;
         const last = historyRef.current.pop();
@@ -481,7 +505,7 @@ export default function BattleChess3D() {
       if (modeRef.current === "ai" && historyRef.current.length > 0) {
         undoOnce();
       }
-      
+
       if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
     };
 

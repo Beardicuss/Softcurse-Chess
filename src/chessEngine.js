@@ -205,3 +205,40 @@ export function doMove(gs, fr, ff, tr, tf, promoTo = "Q") {
     if (ngs.status === "checkmate") ngs.last.note += "#";
     return ngs;
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  FEN / ALGEBRAIC CONVERSION — For Neural AI proxy communication
+// ═══════════════════════════════════════════════════════════════
+export function toFEN(gs) {
+    const boardStr = gs.board.map(row => {
+        let empty = 0, line = "";
+        row.forEach(p => {
+            if (!p) { empty++; return; }
+            if (empty) { line += empty; empty = 0; }
+            line += p.c === W ? p.t : p.t.toLowerCase();
+        });
+        if (empty) line += empty;
+        return line;
+    }).join("/");
+    let castling = "";
+    if (gs.cr.w.k) castling += "K";
+    if (gs.cr.w.q) castling += "Q";
+    if (gs.cr.b.k) castling += "k";
+    if (gs.cr.b.q) castling += "q";
+    if (!castling) castling = "-";
+    const F = "abcdefgh", R = "87654321";
+    const ep = gs.ep ? F[gs.ep[1]] + R[gs.ep[0]] : "-";
+    return `${boardStr} ${gs.turn} ${castling} ${ep} 0 1`;
+}
+
+export function fromAlg(move) {
+    if (!move || move.length < 4) return null;
+    const F = "abcdefgh", R = "87654321";
+    const ff = F.indexOf(move[0].toLowerCase());
+    const fr = R.indexOf(move[1]);
+    const tf = F.indexOf(move[2].toLowerCase());
+    const tr = R.indexOf(move[3]);
+    const promo = move[4] ? move[4].toUpperCase() : "Q";
+    if (fr === -1 || ff === -1 || tr === -1 || tf === -1) return null;
+    return [fr, ff, tr, tf, promo];
+}
