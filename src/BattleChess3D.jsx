@@ -513,6 +513,55 @@ export default function BattleChess3D() {
     renderer.domElement.addEventListener('wheel', onMouseWheel, { passive: false });
     renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    // ── Touch controls (mobile orbit / pinch-zoom / tap) ────────
+    let touchStartX = 0, touchStartY = 0, touchDidMove = false, lastPinchDist = 0;
+    const onTouchStart = (e) => {
+      AudioEngine.init();
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchDidMove = false;
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+      }
+    };
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touchDidMove = true;
+        camState.current.targetTheta -= dx * 0.006;
+        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.08, camState.current.targetPhi - dy * 0.006));
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (lastPinchDist > 0) {
+          const scale = lastPinchDist / dist;
+          camState.current.targetDist = Math.max(5, Math.min(22, camState.current.targetDist * scale));
+        }
+        lastPinchDist = dist;
+      }
+    };
+    const onTouchEnd = (e) => {
+      if (touchDidMove || e.changedTouches.length !== 1) return;
+      const touch = e.changedTouches[0];
+      const rect = renderer.domElement.getBoundingClientRect();
+      mv2.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+      mv2.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+      ray.setFromCamera(mv2, camera);
+      const hits = ray.intersectObjects([...sqMeshes.flat(), ...Object.values(PM)], true);
+      const sq = getSquareFromHit(hits); if (sq) handleClick(sq[0], sq[1]);
+    };
+    renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: false });
+    renderer.domElement.addEventListener("touchmove", onTouchMove, { passive: false });
+    renderer.domElement.addEventListener("touchend", onTouchEnd);
+
     window._battleChessReset = () => {
       aiPendingRef.current = false; animatingRef.current = false; gsRef.current = initGame(); spawnAll(gsRef.current.board); clearHL();
       setMsg("⚔  WHITE'S TURN"); setCaps({ w: [], b: [] }); setMoveCount(0); setThinking(false); setMoveLog([]); setPromoModal(null);

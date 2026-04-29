@@ -170,6 +170,30 @@ const STYLES = `
     color: #c5a059;
     border-color: rgba(197,160,89,0.6);
   }
+
+  @media (max-width: 768px) {
+    .menu-item {
+      padding: 14px 20px;
+      font-size: 15px;
+      letter-spacing: 4px;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .menu-icon { font-size: 20px; min-width: 24px; }
+    .hud-btn { padding: 5px 10px; font-size: 11px; letter-spacing: 1px; }
+  }
+
+  @media (max-width: 480px) {
+    .menu-item {
+      padding: 12px 16px;
+      font-size: 13px;
+      letter-spacing: 3px;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .menu-icon { font-size: 16px; min-width: 20px; }
+    .hud-btn { padding: 4px 8px; font-size: 10px; }
+  }
 `;
 
 // ── Decorative crest SVG ─────────────────────────────────────
@@ -458,7 +482,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
         }}>
             <div style={{
                 position: "relative",
-                width: 440,
+                width: "min(440px, 90vw)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -466,7 +490,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                 transition: "opacity 0.6s ease",
             }}>
                 {/* Decorative background crest */}
-                <div style={{ position: "relative", width: 220, height: 220, marginBottom: -80 }}>
+                <div style={{ position: "relative", width: "min(220px, 50vw)", height: "min(220px, 50vw)", marginBottom: "clamp(-80px, -15vw, -40px)" }}>
                     <Crest />
                 </div>
 
@@ -474,10 +498,10 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                 <div style={{ textAlign: "center", marginBottom: "50px", position: "relative", zIndex: 1 }}>
                     <div style={{
                         fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "72px",
+                        fontSize: "clamp(32px, 9vw, 72px)",
                         fontWeight: 900,
                         color: "#c5a059",
-                        letterSpacing: "8px",
+                        letterSpacing: "clamp(3px, 1vw, 8px)",
                         animation: "titleGlow 3s ease-in-out infinite",
                         lineHeight: 1.1,
                     }}>
@@ -485,10 +509,10 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                     </div>
                     <div style={{
                         fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "96px",
+                        fontSize: "clamp(40px, 12vw, 96px)",
                         fontWeight: 900,
                         color: "#e0c88a",
-                        letterSpacing: "6px",
+                        letterSpacing: "clamp(2px, 1vw, 6px)",
                         animation: "titleGlow 3s ease-in-out infinite",
                         lineHeight: 1.0,
                     }}>
@@ -496,10 +520,10 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                     </div>
                     <div style={{
                         fontFamily: "'Cinzel', serif",
-                        fontSize: "22px",
+                        fontSize: "clamp(12px, 3vw, 22px)",
                         color: "rgba(197,160,89,0.85)",
-                        letterSpacing: "12px",
-                        marginTop: "24px",
+                        letterSpacing: "clamp(4px, 1.5vw, 12px)",
+                        marginTop: "clamp(12px, 3vw, 24px)",
                         animation: "subtitlePulse 4s ease-in-out infinite",
                         fontWeight: 700,
                     }}>
@@ -640,16 +664,17 @@ export default function ChessUI({
             {/* Inject styles */}
             <style>{STYLES}</style>
 
-            {/* Three.js canvas mount */}
-            <div ref={mountRef} style={{ width: "100%", height: "100%" }} />
+            {/* Three.js canvas mount — hidden until intro is complete */}
+            <div ref={mountRef} style={{ width: "100%", height: "100%", visibility: introState === "done" ? "visible" : "hidden" }} />
 
             {/* ── LOADING SCREEN (poster + progress / tap to continue) ── */}
             {introState === "loading" && (
                 <div
                     style={{
                         position: "absolute", inset: 0, zIndex: 9999,
+                        background: "#0a0604",
                         backgroundImage: "url('/assets/poster.png')",
-                        backgroundSize: "cover", backgroundPosition: "center",
+                        backgroundSize: "cover", backgroundPosition: "center top",
                         display: "flex", flexDirection: "column",
                         alignItems: "center", justifyContent: "flex-end",
                         paddingBottom: "80px", cursor: phase1Ready ? "pointer" : "default",
@@ -664,7 +689,7 @@ export default function ChessUI({
                         {!phase1Ready ? (
                             <>
                                 <div style={{
-                                    color: "#c5a059", fontSize: "16px", letterSpacing: "6px",
+                                    color: "#c5a059", fontSize: "clamp(12px, 3vw, 16px)", letterSpacing: "clamp(3px, 1vw, 6px)",
                                     fontFamily: "'Cinzel', serif",
                                     animation: "loadingPulse 2.5s ease-in-out infinite",
                                 }}>
@@ -685,7 +710,7 @@ export default function ChessUI({
                             </>
                         ) : (
                             <div style={{
-                                color: "#c5a059", fontSize: "18px", letterSpacing: "8px",
+                                color: "#c5a059", fontSize: "clamp(14px, 3.5vw, 18px)", letterSpacing: "clamp(4px, 1.5vw, 8px)",
                                 fontFamily: "'Cinzel', serif",
                                 animation: "loadingPulse 1.5s ease-in-out infinite",
                                 cursor: "pointer",
@@ -740,8 +765,8 @@ export default function ChessUI({
                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                             zIndex: 100,
                         }}>
-                            <div style={{ color: "#c5a059", fontSize: "32px", letterSpacing: "8px", fontFamily: "'Cinzel Decorative', serif", marginBottom: 40, textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>PAUSED</div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 15, width: 260 }}>
+                            <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>PAUSED</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
                                 <button className="menu-item" onClick={() => setPaused(false)}>▶ RESUME</button>
                                 <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ MAIN MENU</button>
                                 <button className="menu-item" onClick={() => window.close()}>⏏ EXIT TO DESKTOP</button>
@@ -752,8 +777,9 @@ export default function ChessUI({
                     {/* Top bar */}
                     <div style={{
                         position: "absolute", top: 0, left: 0, right: 0,
-                        padding: "14px 20px",
+                        padding: "clamp(8px, 2vw, 14px) clamp(10px, 2vw, 20px)",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
+                        flexWrap: "wrap", gap: "8px",
                         pointerEvents: "none",
                         background: "linear-gradient(180deg,rgba(5,1,10,.93) 0%,transparent 100%)",
                         animation: "hudSlideDown 0.5s ease forwards",
@@ -762,23 +788,25 @@ export default function ChessUI({
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <div style={{ width: 2, height: 32, background: "#c5a059", boxShadow: "0 0 8px #c5a059" }} />
                             <div>
-                                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "5px", opacity: 0.75, fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Softcurse's Chess</div>
-                                <div style={{ color: "#e0f0ff", fontSize: "20px", letterSpacing: "3px", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Angels vs Demons</div>
+                                <div style={{ color: "#c5a059", fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "clamp(2px, 0.8vw, 5px)", opacity: 0.75, fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Softcurse's Chess</div>
+                                <div style={{ color: "#e0f0ff", fontSize: "clamp(14px, 3vw, 20px)", letterSpacing: "clamp(1px, 0.5vw, 3px)", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Angels vs Demons</div>
                             </div>
                         </div>
 
                         {/* Center — status */}
                         <div style={{
-                            padding: "10px 26px",
+                            padding: "clamp(6px, 1.5vw, 10px) clamp(12px, 3vw, 26px)",
                             border: `1px solid ${thinking ? "#224422" : mc + "44"}`,
                             background: thinking ? "rgba(0,40,20,.4)" : `${mc}11`,
                             color: thinking ? "#00ff88" : mc,
                             fontWeight: "bold",
-                            fontSize: "16px", letterSpacing: "2px",
+                            fontSize: "clamp(11px, 2vw, 16px)", letterSpacing: "2px",
                             textShadow: thinking ? "0 0 8px #00ff88" : `0 0 12px ${mc === "#5f0505" ? "#ff0000" : mc}`,
-                            textAlign: "center", minWidth: "290px",
+                            textAlign: "center",
                             transition: "all .3s",
                             fontFamily: "'Cinzel', serif",
+                            order: window.innerWidth <= 768 ? 3 : 0,
+                            flex: window.innerWidth <= 768 ? "1 1 100%" : "0 0 auto",
                         }}>
                             {thinking ? (
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
@@ -804,7 +832,7 @@ export default function ChessUI({
                             {logOpen ? "◀ LOG" : "▶ LOG"}
                         </button>
                         {logOpen && (
-                            <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid rgba(197,160,89,.25)", borderLeft: "none", width: 230, maxHeight: 400, display: "flex", flexDirection: "column" }}>
+                            <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid rgba(197,160,89,.25)", borderLeft: "none", width: "min(230px, 60vw)", maxHeight: "min(400px, 50vh)", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(197,160,89,.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <span style={{ color: "rgba(197,160,89,.6)", fontSize: "12px", letterSpacing: "2.5px", fontFamily: "'Cinzel Decorative', serif" }}>MOVE LOG</span>
                                     <span style={{ color: "rgba(197,160,89,.3)", fontSize: "11px" }}>{moveLog.length} pairs</span>
@@ -823,12 +851,12 @@ export default function ChessUI({
                     </div>
 
                     {/* Captured pieces */}
-                    <div style={{ position: "absolute", bottom: 20, left: 20, display: "flex", flexDirection: "column", gap: 10, animation: "hudSlideUp 0.5s ease forwards" }}>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 200 }}>
-                            {caps.w.map((t, i) => <span key={i} style={{ color: "#c5a059", fontSize: "20px", textShadow: "0 0 8px rgba(197,160,89,.4)" }}>{SYM_W[t]}</span>)}
+                    <div style={{ position: "absolute", bottom: "clamp(10px, 2vw, 20px)", left: "clamp(10px, 2vw, 20px)", display: "flex", flexDirection: "column", gap: 10, animation: "hudSlideUp 0.5s ease forwards" }}>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: "min(200px, 40vw)" }}>
+                            {caps.w.map((t, i) => <span key={i} style={{ color: "#c5a059", fontSize: "clamp(14px, 3vw, 20px)", textShadow: "0 0 8px rgba(197,160,89,.4)" }}>{SYM_W[t]}</span>)}
                         </div>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: 200 }}>
-                            {caps.b.map((t, i) => <span key={i} style={{ color: "#7a3232", fontSize: "20px", textShadow: "0 0 8px rgba(122,50,50,.4)" }}>{SYM_B[t]}</span>)}
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: "min(200px, 40vw)" }}>
+                            {caps.b.map((t, i) => <span key={i} style={{ color: "#7a3232", fontSize: "clamp(14px, 3vw, 20px)", textShadow: "0 0 8px rgba(122,50,50,.4)" }}>{SYM_B[t]}</span>)}
                         </div>
                     </div>
 
