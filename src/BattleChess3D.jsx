@@ -11,6 +11,7 @@ import { AudioEngine } from "./audioEngine.js";
 import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
 import { createGalaxyBackground } from "./galaxyBackground.js";
+import * as OnlineEngine from "./onlineEngine.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -39,7 +40,9 @@ export default function BattleChess3D() {
   const gameStartedRef = useRef(false);
   const modeRef = useRef("pvp");
   const diffRef = useRef("SOLDIER");
-  const playerSideRef = useRef("w");
+  const playerSideRef = useRef(W);
+  const onlineRef = useRef(false);     // true when in online PvP
+  const onlineMoveRef = useRef(null);  // stores { fr, ff, tr, tf, promo } from opponent
   const gsRef = useRef(initGame());
   const historyRef = useRef([]);
   const pendingLogRef = useRef({ w: null, b: null });
@@ -428,6 +431,10 @@ export default function BattleChess3D() {
           } else setMoveLog(ml => [...ml, { w: "—", b: note }]);
         }
         if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(ngs));
+        // Online PvP: send move to opponent
+        if (modeRef.current === "online" && onlineRef.current && piece.c === playerSideRef.current) {
+          OnlineEngine.sendMove(fr, ff, tr, tf, isPawnPromo ? chosenPromo : "Q");
+        }
         console.log("[finish] mode:", modeRef.current, "turn:", ngs.turn, "playerSide:", playerSideRef.current, "status:", ngs.status, "aiPending:", aiPendingRef.current, "animating:", animatingRef.current);
         if (modeRef.current === "ai" && ngs.turn !== playerSideRef.current && (ngs.status === "playing" || ngs.status === "check")) doAITurn();
       };
@@ -444,6 +451,7 @@ export default function BattleChess3D() {
       const g = gsRef.current;
       if (g.status === "checkmate" || g.status === "stalemate") return;
       if (modeRef.current === "ai" && g.turn !== playerSideRef.current) return;
+      if (modeRef.current === "online" && g.turn !== playerSideRef.current) return;
       if (modeRef.current === "ai_vs_ai") return; // Spectator mode — no interaction
       if (g.sel) {
         const [sr, sf] = g.sel;
@@ -605,6 +613,26 @@ export default function BattleChess3D() {
             }
           };
           spectatorLoop();
+        }
+
+        // Online PvP: set up opponent move listener
+        if (modeRef.current === "online") {
+          onlineRef.current = true;
+          OnlineEngine.on("opponentMove", (move) => {
+            if (animatingRef.current) {
+              // Queue move if currently animating
+              const waitAndExec = () => {
+                if (animatingRef.current) { setTimeout(waitAndExec, 100); return; }
+                executeMove(move.fr, move.ff, move.tr, move.tf, move.promo || "Q");
+              };
+              setTimeout(waitAndExec, 100);
+            } else {
+              executeMove(move.fr, move.ff, move.tr, move.tf, move.promo || "Q");
+            }
+          });
+          OnlineEngine.on("opponentLeft", () => {
+            setMsg("⚔ OPPONENT DISCONNECTED");
+          });
         }
       } else {
         const saved = localStorage.getItem("battleChessSave");

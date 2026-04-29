@@ -219,20 +219,66 @@ function Crest() {
 
 // ── New Game sub-panel ───────────────────────────────────────
 function NewGamePanel({ onStart, onBack, allPhasesReady }) {
-    const [step, setStep] = useState("mode"); // "mode" | "side" | "difficulty"
+    const [step, setStep] = useState("mode"); // "mode" | "side" | "difficulty" | "join" | "waiting"
     const [mode, setMode] = useState(null);
     const [side, setSide] = useState("w"); // "w" (Angels) | "b" (Demons)
     const [diff, setDiff] = useState("SOLDIER");
+    const [roomCode, setRoomCode] = useState("");
+    const [joinInput, setJoinInput] = useState("");
+    const [onlineStatus, setOnlineStatus] = useState("");
 
     const handleModeSelect = (m) => {
-        if (!allPhasesReady) return;
         setMode(m);
         if (m === "pvp") {
             onStart({ mode: "pvp", diff: null });
         } else if (m === "ai_vs_ai") {
             onStart({ mode: "ai_vs_ai", diff: "GRANDMASTER" });
+        } else if (m === "online_create") {
+            handleCreateRoom();
+        } else if (m === "online_join") {
+            setStep("join");
         } else {
             setStep("side");
+        }
+    };
+
+    const handleCreateRoom = async () => {
+        setOnlineStatus("Creating room...");
+        setStep("waiting");
+        try {
+            const { createRoom, on } = await import("./onlineEngine.js");
+            const code = await createRoom();
+            setRoomCode(code);
+            setOnlineStatus("Waiting for opponent...");
+            on("assigned", (s) => setSide(s));
+            on("start", () => {
+                onStart({ mode: "online", diff: null, side: side });
+            });
+        } catch (e) {
+            setOnlineStatus("Failed to create room");
+            console.error(e);
+        }
+    };
+
+    const handleJoinRoom = async () => {
+        if (!joinInput.trim()) return;
+        setOnlineStatus("Joining room...");
+        setStep("waiting");
+        try {
+            const { joinRoom, on } = await import("./onlineEngine.js");
+            const code = await joinRoom(joinInput);
+            setRoomCode(code);
+            on("assigned", (s) => {
+                setSide(s);
+            });
+            on("start", () => {
+                onStart({ mode: "online", diff: null, side: side });
+            });
+            setOnlineStatus("Connected! Waiting for game to start...");
+        } catch (e) {
+            setOnlineStatus("Failed to join room");
+            setStep("join");
+            console.error(e);
         }
     };
 
@@ -249,7 +295,15 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("pvp")}>
                         <span className="menu-icon">⚔</span>
-                        PLAYER VS PLAYER
+                        LOCAL PVP
+                    </button>
+                    <button className="menu-item" onClick={() => handleModeSelect("online_create")}>
+                        <span className="menu-icon">🌐</span>
+                        ONLINE PVP
+                    </button>
+                    <button className="menu-item" onClick={() => handleModeSelect("online_join")}>
+                        <span className="menu-icon">🔗</span>
+                        JOIN GAME
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("ai_vs_ai")}>
                         <span className="menu-icon">📽</span>
@@ -259,6 +313,78 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
                         BACK
+                    </button>
+                </>
+            )}
+
+            {step === "join" && (
+                <>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                        ENTER ROOM CODE
+                    </div>
+                    <input
+                        type="text"
+                        value={joinInput}
+                        onChange={(e) => setJoinInput(e.target.value.toUpperCase())}
+                        placeholder="ABC123"
+                        maxLength={6}
+                        style={{
+                            width: "100%", padding: "16px 20px", marginBottom: 16,
+                            background: "rgba(5,1,10,0.6)", border: "1px solid rgba(197,160,89,0.3)",
+                            color: "#c5a059", fontSize: "24px", letterSpacing: "12px",
+                            fontFamily: "'Cinzel', serif", textAlign: "center",
+                            outline: "none",
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
+                        autoFocus
+                    />
+                    <button className="menu-item" onClick={handleJoinRoom}>
+                        <span className="menu-icon">▶</span>
+                        JOIN
+                    </button>
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                        <span className="menu-icon">←</span>
+                        BACK
+                    </button>
+                </>
+            )}
+
+            {step === "waiting" && (
+                <>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                        {roomCode ? "ROOM CODE" : "CONNECTING..."}
+                    </div>
+                    {roomCode && (
+                        <div style={{
+                            fontSize: "clamp(28px, 7vw, 42px)", letterSpacing: "12px",
+                            color: "#e0c88a", fontFamily: "'Cinzel Decorative', serif",
+                            textAlign: "center", marginBottom: 20,
+                            textShadow: "0 0 20px rgba(197,160,89,0.5)",
+                            cursor: "pointer",
+                        }}
+                            onClick={() => navigator.clipboard?.writeText(roomCode)}
+                            title="Click to copy"
+                        >
+                            {roomCode}
+                        </div>
+                    )}
+                    <div style={{
+                        color: "rgba(197,160,89,0.5)", fontSize: "13px", letterSpacing: "3px",
+                        textAlign: "center", marginBottom: 10,
+                        animation: "loadingPulse 2s ease-in-out infinite",
+                    }}>
+                        {onlineStatus}
+                    </div>
+                    {roomCode && (
+                        <div style={{ color: "rgba(197,160,89,0.3)", fontSize: "11px", textAlign: "center", marginBottom: 20 }}>
+                            Share this code with your opponent
+                        </div>
+                    )}
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => { setStep("mode"); setRoomCode(""); }} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                        <span className="menu-icon">←</span>
+                        CANCEL
                     </button>
                 </>
             )}
@@ -557,7 +683,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                                 opacity: 0,
                             }}
                             onClick={() => {
-                                if (p === "continue") { if (allPhasesReady) onStart(null); }
+                                if (p === "continue") { onStart(null); }
                                 else if (p === "exit") { window.close(); }
                                 else setPanel(p);
                             }}
