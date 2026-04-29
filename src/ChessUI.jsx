@@ -59,6 +59,16 @@ const STYLES = `
     50%       { opacity: 0.28; transform: scale(1.03); }
   }
 
+  @keyframes loadingPulse {
+    0%, 100% { opacity: 0.5; }
+    50%       { opacity: 1.0; }
+  }
+
+  @keyframes progressGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(197,160,89,0.3); }
+    50%       { box-shadow: 0 0 20px rgba(197,160,89,0.6); }
+  }
+
   .menu-item {
     position: relative;
     display: flex;
@@ -184,13 +194,14 @@ function Crest() {
 }
 
 // ── New Game sub-panel ───────────────────────────────────────
-function NewGamePanel({ onStart, onBack }) {
+function NewGamePanel({ onStart, onBack, allPhasesReady }) {
     const [step, setStep] = useState("mode"); // "mode" | "side" | "difficulty"
     const [mode, setMode] = useState(null);
     const [side, setSide] = useState("w"); // "w" (Angels) | "b" (Demons)
     const [diff, setDiff] = useState("SOLDIER");
 
     const handleModeSelect = (m) => {
+        if (!allPhasesReady) return;
         setMode(m);
         if (m === "pvp") {
             onStart({ mode: "pvp", diff: null });
@@ -419,7 +430,7 @@ function SettingsPanel({ onBack }) {
 }
 
 // ── Main Menu overlay ────────────────────────────────────────
-function MainMenu({ onStart, hasSave }) {
+function MainMenu({ onStart, hasSave, allPhasesReady }) {
     const [panel, setPanel] = useState("main"); // "main" | "newgame" | "credits" | "howtoplay"
     const [visible, setVisible] = useState(false);
 
@@ -522,7 +533,7 @@ function MainMenu({ onStart, hasSave }) {
                                 opacity: 0,
                             }}
                             onClick={() => {
-                                if (p === "continue") { onStart(null); }
+                                if (p === "continue") { if (allPhasesReady) onStart(null); }
                                 else if (p === "exit") { window.close(); }
                                 else setPanel(p);
                             }}
@@ -534,7 +545,7 @@ function MainMenu({ onStart, hasSave }) {
                     ))}
 
                     {/* Sub panels */}
-                    {panel === "newgame" && <NewGamePanel onStart={onStart} onBack={() => setPanel("main")} />}
+                    {panel === "newgame" && <NewGamePanel onStart={onStart} onBack={() => setPanel("main")} allPhasesReady={allPhasesReady} />}
                     {panel === "credits" && <CreditsPanel onBack={() => setPanel("main")} />}
                     {panel === "howtoplay" && <HowToPlayPanel onBack={() => setPanel("main")} />}
                     {panel === "settings" && <SettingsPanel onBack={() => setPanel("main")} />}
@@ -563,7 +574,10 @@ export default function ChessUI({
     moveLog, logOpen, logRef,
     setModeFixed, setDiffFixed, setLogOpen,
     gameStarted, onMenuStart,
+    phase1Ready, allPhasesReady, phase1Progress,
 }) {
+    const LOADING_MSGS = ["Loading world...", "Summoning armies...", "Preparing the board..."];
+    const [loadMsgIdx, setLoadMsgIdx] = useState(0);
     const isWt = msg.includes("WHITE");
     const mc = msg.includes("WINS") ? "#c5a059"
         : msg.includes("CHECK") && !msg.includes("CHECKMATE") ? "#5f0505"
@@ -571,18 +585,40 @@ export default function ChessUI({
 
     const hasSave = !!localStorage.getItem("battleChessSave");
     const [paused, setPaused] = useState(false);
-    const [showIntro, setShowIntro] = useState(true);
 
+    // Intro state machine: "loading" → "video" → "done"
+    const [introState, setIntroState] = useState("loading");
+    const videoRef = useRef(null);
+
+    // Cycle loading messages while on loading screen
     useEffect(() => {
-        if (!showIntro) return;
-        const onAny = () => setShowIntro(false);
-        window.addEventListener("keydown", onAny);
-        window.addEventListener("mousedown", onAny);
+        if (introState !== "loading" || phase1Ready) return;
+        const iv = setInterval(() => setLoadMsgIdx(i => (i + 1) % LOADING_MSGS.length), 2500);
+        return () => clearInterval(iv);
+    }, [introState, phase1Ready]);
+
+    // When user taps "continue" on loading screen and video starts, skip handler
+    useEffect(() => {
+        if (introState !== "video") return;
+        const onSkip = () => setIntroState("done");
+        window.addEventListener("keydown", onSkip);
+        window.addEventListener("mousedown", onSkip);
         return () => {
-            window.removeEventListener("keydown", onAny);
-            window.removeEventListener("mousedown", onAny);
+            window.removeEventListener("keydown", onSkip);
+            window.removeEventListener("mousedown", onSkip);
         };
-    }, [showIntro]);
+    }, [introState]);
+
+    const handleTapToContinue = () => {
+        setIntroState("video");
+        // Video will autoplay with sound since this click is the user gesture
+        setTimeout(() => {
+            if (videoRef.current) {
+                videoRef.current.muted = false;
+                videoRef.current.play().catch(() => { });
+            }
+        }, 50);
+    };
 
     useEffect(() => {
         if (!gameStarted) return;
@@ -601,18 +637,80 @@ export default function ChessUI({
             position: "relative", overflow: "hidden",
             userSelect: "none",
         }}>
-            {/* ── INTRO FLASH SCREEN ────────────────────────────── */}
-            {showIntro && (
+            {/* Inject styles */}
+            <style>{STYLES}</style>
+
+            {/* Three.js canvas mount */}
+            <div ref={mountRef} style={{ width: "100%", height: "100%" }} />
+
+            {/* ── LOADING SCREEN (poster + progress / tap to continue) ── */}
+            {introState === "loading" && (
+                <div
+                    style={{
+                        position: "absolute", inset: 0, zIndex: 9999,
+                        backgroundImage: "url('/assets/poster.png')",
+                        backgroundSize: "cover", backgroundPosition: "center",
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "flex-end",
+                        paddingBottom: "80px", cursor: phase1Ready ? "pointer" : "default",
+                    }}
+                    onClick={phase1Ready ? handleTapToContinue : undefined}
+                >
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
+                    <div style={{
+                        position: "relative", zIndex: 1, width: "60%", maxWidth: 400,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
+                    }}>
+                        {!phase1Ready ? (
+                            <>
+                                <div style={{
+                                    color: "#c5a059", fontSize: "16px", letterSpacing: "6px",
+                                    fontFamily: "'Cinzel', serif",
+                                    animation: "loadingPulse 2.5s ease-in-out infinite",
+                                }}>
+                                    {LOADING_MSGS[loadMsgIdx]}
+                                </div>
+                                <div style={{
+                                    width: "100%", height: 6, borderRadius: 3,
+                                    background: "rgba(197,160,89,0.15)", overflow: "hidden",
+                                }}>
+                                    <div style={{
+                                        width: `${(phase1Progress * 100).toFixed(0)}%`,
+                                        height: "100%", borderRadius: 3,
+                                        background: "linear-gradient(90deg, #c5a059, #e0c88a)",
+                                        transition: "width 0.4s ease",
+                                        animation: "progressGlow 2s ease-in-out infinite",
+                                    }} />
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{
+                                color: "#c5a059", fontSize: "18px", letterSpacing: "8px",
+                                fontFamily: "'Cinzel', serif",
+                                animation: "loadingPulse 1.5s ease-in-out infinite",
+                                cursor: "pointer",
+                            }}>
+                                TAP TO CONTINUE
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── INTRO VIDEO (plays with sound after user tap) ──────── */}
+            {introState === "video" && (
                 <div style={{
                     position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
                     zIndex: 9999, background: "#000",
                 }}>
                     <video
+                        ref={videoRef}
                         src={`${ASSET_CDN}/flash_screen.mp4`}
                         autoPlay
+                        muted
                         playsInline
                         style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                        onEnded={() => setShowIntro(false)}
+                        onEnded={() => setIntroState("done")}
                     />
                     <div style={{
                         position: "absolute", bottom: 40, width: "100%", textAlign: "center",
@@ -622,17 +720,13 @@ export default function ChessUI({
                     </div>
                 </div>
             )}
-            {/* Inject styles */}
-            <style>{STYLES}</style>
-
-            {/* Three.js canvas mount */}
-            <div ref={mountRef} style={{ width: "100%", height: "100%" }} />
 
             {/* ── MAIN MENU ─────────────────────────────────────── */}
-            {!gameStarted && (
+            {introState === "done" && !gameStarted && (
                 <MainMenu
                     hasSave={hasSave}
                     onStart={(cfg) => onMenuStart(cfg)}
+                    allPhasesReady={allPhasesReady}
                 />
             )}
 

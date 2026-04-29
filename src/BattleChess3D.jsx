@@ -30,6 +30,11 @@ export default function BattleChess3D() {
   const [logOpen, setLogOpen] = useState(false);
   const logRef = useRef(null);
 
+  // ── Phased loading state ────────────────────────────────────
+  const [phase1Ready, setPhase1Ready] = useState(false);
+  const [allPhasesReady, setAllPhasesReady] = useState(false);
+  const [phase1Progress, setPhase1Progress] = useState(0);
+
   // ── Stable refs ───────────────────────────────────────────────
   const gameStartedRef = useRef(false);
   const modeRef = useRef("pvp");
@@ -113,15 +118,16 @@ export default function BattleChess3D() {
     rimB.position.set(0, 3, 8);
     scene.add(rimB);
 
-    // ── Board ────────────────────────────────────────────────────
+    // ── Board (Phased Loading) ────────────────────────────────────
     const boardGrp = new THREE.Group();
     scene.add(boardGrp);
     const gltfLoader = new GLTFLoader();
-    gltfLoader.load(`${ASSET_CDN}/board.glb`, (gltf) => {
-      const bModel = gltf.scene;
-      bModel.position.set(0, -0.25, 0);
-      bModel.scale.setScalar(0.45);
-      bModel.traverse(node => {
+
+    function addBoardModel(gltf) {
+      const model = gltf.scene;
+      model.position.set(0, -0.25, 0);
+      model.scale.setScalar(0.45);
+      model.traverse(node => {
         if (node.isMesh) {
           node.receiveShadow = true;
           node.castShadow = true;
@@ -137,7 +143,28 @@ export default function BattleChess3D() {
           }
         }
       });
-      boardGrp.add(bModel);
+      boardGrp.add(model);
+    }
+
+    // Phase 1: board + ground (lightweight, ~30MB total)
+    const phase1Total = 2;
+    let phase1Loaded = 0;
+    const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
+
+    const p1Board = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/board.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+
+    Promise.all([p1Board, p1Ground]).then(() => {
+      setPhase1Ready(true);
+      // Phase 2: walls (80MB, streams silently)
+      gltfLoader.load(`${ASSET_CDN}/walls.glb`, (g) => {
+        addBoardModel(g);
+        // Phase 3: decoration (100MB, streams silently)
+        gltfLoader.load(`${ASSET_CDN}/decoration.glb`, (g2) => {
+          addBoardModel(g2);
+          setAllPhasesReady(true);
+        });
+      });
     });
 
     const sqMeshes = [];
@@ -607,6 +634,7 @@ export default function BattleChess3D() {
         mountRef={mountRef} msg={msg} caps={caps} moveCount={moveCount} mode={mode} diff={diff} playerSide={playerSide} thinking={thinking} promoModal={promoModal}
         moveLog={moveLog} logOpen={logOpen} logRef={logRef} setModeFixed={setModeFixed} setDiffFixed={setDiffFixed} setLogOpen={setLogOpen}
         gameStarted={gameStarted} onMenuStart={handleMenuStart}
+        phase1Ready={phase1Ready} allPhasesReady={allPhasesReady} phase1Progress={phase1Progress}
       />
     </div>
   );

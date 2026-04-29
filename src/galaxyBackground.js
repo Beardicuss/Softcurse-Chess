@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { ASSET_CDN } from "./constants.js";
 
 /**
  * Galaxy Background
@@ -52,7 +53,7 @@ export function createGalaxyBackground(scene) {
     scene.add(stars);
 
     // ── GLB-based galaxy core particle system ────────────────────
-    loader.load("/models/bg/space.glb", (gltf) => {
+    loader.load(`${ASSET_CDN}/space.glb`, (gltf) => {
         // Extract all vertex positions from all meshes in the GLB
         const allPositions = [];
         gltf.scene.traverse((node) => {
