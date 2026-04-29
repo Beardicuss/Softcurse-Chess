@@ -8,7 +8,7 @@ import { W, B, initGame, findKing, legalMoves, doMove } from "./chessEngine.js";
 import { getNeuralMove } from "./aiEngine.js";
 import { makePiece } from "./pieceFactory.js";
 import { AudioEngine } from "./audioEngine.js";
-import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME } from "./constants.js";
+import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
 import { createGalaxyBackground } from "./galaxyBackground.js";
 
@@ -117,7 +117,7 @@ export default function BattleChess3D() {
     const boardGrp = new THREE.Group();
     scene.add(boardGrp);
     const gltfLoader = new GLTFLoader();
-    gltfLoader.load('/models/board/board.glb', (gltf) => {
+    gltfLoader.load(`${ASSET_CDN}/board.glb`, (gltf) => {
       const bModel = gltf.scene;
       bModel.position.set(0, -0.25, 0);
       bModel.scale.setScalar(0.45);

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { W } from "./chessEngine.js";
+import { ASSET_CDN } from "./constants.js";
 
 const loader = new GLTFLoader();
 const modelCache = {};
@@ -31,7 +32,7 @@ function loadGeometry(name) {
     if (!modelCache[name]) {
         modelCache[name] = new Promise((resolve, reject) => {
             loader.load(
-                `/models/figures/${name}.glb`,
+                `${ASSET_CDN}/${name}.glb`,
                 (gltf) => {
                     let meshObj = null;
                     gltf.scene.traverse((child) => {
@@ -149,7 +150,7 @@ export function makePiece(type, color) {
                         // and more responsive to direct scene lights
                         if (m.roughness !== undefined) m.roughness = 0.8;
                         if (m.metalness !== undefined) m.metalness = 0.1;
-                        
+
                         // Slightly brighten the base color if it's very dark to reveal details
                         if (m.color) {
                             const hsl = {};

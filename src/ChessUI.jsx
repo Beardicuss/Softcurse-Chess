@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { W, B } from "./chessEngine.js";
-import { SYM_W, SYM_B } from "./constants.js";
+import { SYM_W, SYM_B, ASSET_CDN } from "./constants.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  CHESS UI — Main Menu + HUD overlay
@@ -608,7 +608,7 @@ export default function ChessUI({
                     zIndex: 9999, background: "#000",
                 }}>
                     <video
-                        src="/intro/flash_screen.mp4"
+                        src={`${ASSET_CDN}/flash_screen.mp4`}
                         autoPlay
                         playsInline
                         style={{ width: "100%", height: "100%", objectFit: "contain" }}
