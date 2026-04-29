@@ -10,9 +10,9 @@ const W_FILES = {
     P: "obj_003",
     R: "obj_005",
     N: "obj_002",
-    B: "obj_001",
+    B: "obj_000",
     Q: "obj_004",
-    K: "obj_000",
+    K: "obj_001",
 };
 
 const B_FILES = {
