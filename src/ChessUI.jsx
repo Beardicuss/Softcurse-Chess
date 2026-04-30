@@ -592,7 +592,7 @@ function SettingsPanel({ onBack }) {
     const { t, lang, setLang } = useLang();
     const LANG_LABELS = ["ENGLISH", "РУССКИЙ", "ქართული"];
     return (
-        <div className="sub-panel" style={{ width: "100%" }}>
+        <div className="sub-panel" style={{ width: "100%", maxWidth: "400px", margin: "0 auto" }}>
             <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>{t.SETTINGS}</div>
 
             <div style={{ marginBottom: "20px" }}>
@@ -775,18 +775,15 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
         </div>
     );
 }
-
-// ═══════════════════════════════════════════════════════════════
-//  MAIN EXPORT
-// ═══════════════════════════════════════════════════════════════
 export default function ChessUI({
     mountRef, msg, caps, moveCount, mode, diff, thinking, promoModal,
     moveLog, logOpen, logRef,
     setModeFixed, setDiffFixed, setLogOpen,
     gameStarted, onMenuStart,
-    phase1Ready, allPhasesReady, phase1Progress,
+    phase1Ready, allPhasesReady, phase1Progress
 }) {
     const { t } = useLang();
+
     const LOADING_MSGS = [t.LOADING_1, t.LOADING_2, t.LOADING_3];
     const [loadMsgIdx, setLoadMsgIdx] = useState(0);
     const isWt = msg.includes("_W") || msg.includes("WHITE");
@@ -798,6 +795,11 @@ export default function ChessUI({
 
     const hasSave = !!localStorage.getItem("battleChessSave");
     const [paused, setPaused] = useState(false);
+    const [pausePanel, setPausePanel] = useState("main");
+
+    useEffect(() => {
+        if (!paused) setPausePanel("main");
+    }, [paused]);
 
     // Intro state machine: "loading" → "video" → "done"
     const [introState, setIntroState] = useState("loading");
@@ -955,12 +957,19 @@ export default function ChessUI({
                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                             zIndex: 100,
                         }}>
-                            <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>{t.PAUSED}</div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
-                                <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.CONTINUE}</button>
-                                <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.EXIT}</button>
-                                <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
-                            </div>
+                            {pausePanel === "main" ? (
+                                <>
+                                    <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>{t.PAUSED}</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
+                                        <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.RESUME}</button>
+                                        <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
+                                        <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
+                                        <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <SettingsPanel onBack={() => setPausePanel("main")} />
+                            )}
                         </div>
                     )}
 

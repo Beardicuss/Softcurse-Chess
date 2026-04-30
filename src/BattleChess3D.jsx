@@ -90,7 +90,7 @@ export default function BattleChess3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(THEME.bg);
     scene.fog = new THREE.FogExp2(THEME.bg, THEME.fogDensity);
-    const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 500);
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
     renderer.setSize(EW, EH);
     renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
@@ -167,6 +167,13 @@ export default function BattleChess3D() {
       model.scale.setScalar(0.45);
       model.traverse(node => {
         if (node.isMesh) {
+          node.geometry.computeBoundingSphere();
+          // Hide baked-in sky domes or background proxy spheres from the 3D assets
+          if (node.geometry.boundingSphere && node.geometry.boundingSphere.radius > 45) {
+            node.visible = false;
+            return;
+          }
+
           node.receiveShadow = !isMobile;
           node.castShadow = false;
           if (node.material) {
@@ -188,23 +195,31 @@ export default function BattleChess3D() {
       boardGrp.add(model);
     }
 
-    // Phase 1: board + ground + figures + walls
-    const phase1Total = 4; // board, ground, figures, walls
+    // Phase 1: board + ground + figures + walls + decoration
+    const phase1Total = 5; // board, ground, walls, figures, decoration
     let phase1Loaded = 0;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const p1Board = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/board.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    const p1Deco = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/decoration.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     const p1Figures = preloadModels().then(() => phase1tick());
 
-    Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "0") {
+        console.log("SCENE DUMP:");
+        scene.traverse(node => {
+          if (node.isMesh) {
+            console.log(`MESH: ${node.name || 'unnamed'} - Geometry: ${node.geometry.type} - Material: ${node.material.type} - Radius: ${node.geometry.boundingSphere?.radius}`);
+          }
+        });
+      }
+    });
+
+    Promise.all([p1Board, p1Ground, p1Walls, p1Deco, p1Figures]).then(() => {
       setPhase1Ready(true);
-      // Decoration streams silently in background
-      gltfLoader.load(`${ASSET_CDN}/decoration.glb`, (g) => {
-        addBoardModel(g);
-        setAllPhasesReady(true);
-      });
+      setAllPhasesReady(true);
     });
 
     const sqMeshes = [];
@@ -720,6 +735,12 @@ export default function BattleChess3D() {
 
     const animate = (time) => {
       if (destroyed) return; requestAnimationFrame(animate);
+
+      // Slow orbit in menu only — full cycle 120 seconds
+      if (!gameStartedRef.current) {
+        const orbitSpeed = (Math.PI * 2) / (120 * 60); // 2min at ~60fps
+        camState.current.targetTheta += orbitSpeed;
+      }
 
       // Smooth camera interpolation
       const lerpFactor = 0.1;

@@ -4,6 +4,7 @@ export const T = {
     en: {
         PLAY: "PLAY", NEW_GAME: "NEW GAME", CONTINUE: "CONTINUE", HOW_TO_PLAY: "HOW TO PLAY",
         SETTINGS: "SETTINGS", CREDITS: "CREDITS", EXIT: "EXIT", BACK: "BACK", AUDIO: "AUDIO",
+        RESUME: "RESUME", MAIN_MENU: "MAIN MENU",
         MASTER: "MASTER", MUSIC: "MUSIC", SFX: "SFX", LANGUAGE: "LANGUAGE", NO_SAVE: "NO SAVE",
         SELECT_MODE: "SELECT MODE", PLAYER_VS_AI: "PLAYER VS AI", LOCAL_PVP: "LOCAL PVP",
         ONLINE_PVP: "ONLINE PVP", JOIN_GAME: "JOIN GAME", AI_VS_AI: "AI VS AI",
@@ -57,6 +58,7 @@ export const T = {
     ru: {
         PLAY: "ИГРАТЬ", NEW_GAME: "НОВАЯ ИГРА", CONTINUE: "ПРОДОЛЖИТЬ", HOW_TO_PLAY: "КАК ИГРАТЬ",
         SETTINGS: "НАСТРОЙКИ", CREDITS: "СОЗДАТЕЛИ", EXIT: "ВЫХОД", BACK: "НАЗАД", AUDIO: "ЗВУК",
+        RESUME: "ПРОДОЛЖИТЬ", MAIN_MENU: "ГЛАВНОЕ МЕНЮ",
         MASTER: "ОБЩИЙ", MUSIC: "МУЗЫКА", SFX: "ЭФФЕКТЫ", LANGUAGE: "ЯЗЫК", NO_SAVE: "НЕТ СОХРАНЕНИЙ",
         SELECT_MODE: "ВЫБЕРИТЕ РЕЖИМ", PLAYER_VS_AI: "ИГРОК ПРОТИВ ИИ", LOCAL_PVP: "ЛОКАЛЬНЫЙ PVP",
         ONLINE_PVP: "ОНЛАЙН PVP", JOIN_GAME: "ПРИСОЕДИНИТЬСЯ", AI_VS_AI: "ИИ ПРОТИВ ИИ",
@@ -110,6 +112,7 @@ export const T = {
     ge: {
         PLAY: "თამაში", NEW_GAME: "ახალი თამაში", CONTINUE: "გაგრძელება", HOW_TO_PLAY: "როგორ ვითამაშოთ",
         SETTINGS: "პარამეტრები", CREDITS: "ავტორები", EXIT: "გამოსვლა", BACK: "უკან", AUDIO: "ხმა",
+        RESUME: "დაბრუნება", MAIN_MENU: "მთავარი მენიუ",
         MASTER: "მთავარი", MUSIC: "მუსიკა", SFX: "ეფექტები", LANGUAGE: "ენა", NO_SAVE: "შენახული არ არის",
         SELECT_MODE: "აირჩიეთ რეჟიმი", PLAYER_VS_AI: "მოთამაშე AI-ს წინააღმდეგ", LOCAL_PVP: "ლოკალური PVP",
         ONLINE_PVP: "ონლაინ PVP", JOIN_GAME: "თამაშში შესვლა", AI_VS_AI: "AI AI-ს წინააღმდეგ",

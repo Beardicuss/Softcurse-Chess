@@ -14,7 +14,7 @@ export const ASSET_CDN = "https://pub-c7a0bf61064c488e97f61897fa5a3269.r2.dev";
 // ── Theme colors ──────────────────────────────────────────────
 export const THEME = {
     bg: 0x0a0a0c,
-    fogDensity: 0.018,
+    fogDensity: 0.003,
     boardBase: 0x111111,
     boardBorder: 0xcca35e,
     gridLine: 0xff00aa,
