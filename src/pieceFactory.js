@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { W } from "./chessEngine.js";
 import { ASSET_CDN } from "./constants.js";
+import { getAntiqueStoneMaterial } from "./antiqueStoneMaterial.js";  // ← was missing
 
 const loader = new GLTFLoader();
 const modelCache = {};
@@ -122,6 +123,7 @@ function makeProcedural(type, color) {
 export function makePiece(type, color) {
     const g = new THREE.Group();
     const isW = color === W;
+    const style = isW ? 'angel' : 'demon';
 
     const accentMat = new THREE.MeshStandardMaterial({
         color: isW ? 0xfff7ef : 0x7a3232,
@@ -138,33 +140,13 @@ export function makePiece(type, color) {
         .then((geoMeshObj) => {
             while (g.children.length) g.remove(g.children[0]);
 
-            const mesh = geoMeshObj.clone();
-
-            mesh.traverse(node => {
-                if (!node.isMesh) return;
-                if (node.material) {
-                    const mats = Array.isArray(node.material) ? node.material : [node.material];
-                    mats.forEach(m => {
-                        m.envMapIntensity = 0;
-                        // Increase roughness and reduce metalness to make them less dependent on reflections
-                        // and more responsive to direct scene lights
-                        if (m.roughness !== undefined) m.roughness = 0.8;
-                        if (m.metalness !== undefined) m.metalness = 0.1;
-
-                        // Slightly brighten the base color if it's very dark to reveal details
-                        if (m.color) {
-                            const hsl = {};
-                            m.color.getHSL(hsl);
-                            if (hsl.l < 0.2) { // If it's very dark (like the black pieces)
-                                m.color.setHSL(hsl.h, hsl.s, 0.25); // Lift the lightness slightly
-                            }
-                        }
-                        m.needsUpdate = true;
-                    });
-                }
-                node.castShadow = true;
-                node.receiveShadow = true;
-            });
+            // ── Use geometry directly, apply ShaderMaterial fresh ──
+            const mesh = new THREE.Mesh(
+                geoMeshObj.geometry,
+                getAntiqueStoneMaterial(style)
+            );
+            mesh.castShadow = true;
+            mesh.receiveShadow = false;
 
             const geo = mesh.geometry;
             geo.computeBoundingBox();

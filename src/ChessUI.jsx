@@ -803,14 +803,14 @@ export default function ChessUI({
                         backgroundSize: "cover", backgroundPosition: "center top",
                         display: "flex", flexDirection: "column",
                         alignItems: "center", justifyContent: "flex-end",
-                        paddingBottom: "80px", cursor: phase1Ready ? "pointer" : "default",
+                        paddingBottom: "15vh", cursor: phase1Ready ? "pointer" : "default",
                     }}
                     onClick={phase1Ready ? handleTapToContinue : undefined}
                 >
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }} />
                     <div style={{
-                        position: "relative", zIndex: 1, width: "60%", maxWidth: 400,
-                        display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
+                        position: "relative", zIndex: 1, width: "70%", maxWidth: 500,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 20,
                     }}>
                         {!phase1Ready ? (
                             <>
@@ -818,19 +818,20 @@ export default function ChessUI({
                                     color: "#c5a059", fontSize: "clamp(12px, 3vw, 16px)", letterSpacing: "clamp(3px, 1vw, 6px)",
                                     fontFamily: "'Cinzel', serif",
                                     animation: "loadingPulse 2.5s ease-in-out infinite",
+                                    textShadow: "0 2px 10px rgba(0,0,0,0.8)",
                                 }}>
                                     {LOADING_MSGS[loadMsgIdx]}
                                 </div>
                                 <div style={{
-                                    width: "100%", height: 6, borderRadius: 3,
-                                    background: "rgba(197,160,89,0.15)", overflow: "hidden",
+                                    width: "100%", height: 4, borderRadius: 2, position: "relative",
+                                    background: "rgba(0,0,0,0.6)", overflow: "hidden",
+                                    boxShadow: "0 2px 10px rgba(0,0,0,1)",
                                 }}>
                                     <div style={{
-                                        width: `${(phase1Progress * 100).toFixed(0)}%`,
-                                        height: "100%", borderRadius: 3,
-                                        background: "linear-gradient(90deg, #c5a059, #e0c88a)",
-                                        transition: "width 0.4s ease",
-                                        animation: "progressGlow 2s ease-in-out infinite",
+                                        position: "absolute", left: 0, top: 0, bottom: 0, width: "100%",
+                                        background: "linear-gradient(90deg, #e0c88a 0%, #c5a059 50%, #3a3a3a 50%, #111111 100%)",
+                                        clipPath: `inset(0 ${100 - (phase1Progress * 100).toFixed(0)}% 0 0)`,
+                                        transition: "clip-path 0.4s ease",
                                     }} />
                                 </div>
                             </>

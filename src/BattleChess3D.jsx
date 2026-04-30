@@ -6,12 +6,13 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // ── Module imports ──────────────────────────────────────────────
 import { W, B, initGame, findKing, legalMoves, doMove } from "./chessEngine.js";
 import { getNeuralMove } from "./aiEngine.js";
-import { makePiece } from "./pieceFactory.js";
+import { makePiece, preloadModels } from "./pieceFactory.js";
 import { AudioEngine } from "./audioEngine.js";
 import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
 import { createGalaxyBackground } from "./galaxyBackground.js";
 import * as OnlineEngine from "./onlineEngine.js";
+import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -82,44 +83,78 @@ export default function BattleChess3D() {
     let EW = el.clientWidth, EH = el.clientHeight;
     let destroyed = false;
 
+    // ── Device detection ─────────────────────────────────────────
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
     // ── Scene ───────────────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(THEME.bg);
     scene.fog = new THREE.FogExp2(THEME.bg, THEME.fogDensity);
     const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 100);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
     renderer.setSize(EW, EH);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = !isMobile;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.5;
     el.appendChild(renderer.domElement);
 
-    const galaxy = createGalaxyBackground(scene);
+    // ── Galaxy (PC only) ─────────────────────────────────────────
+    const galaxy = isMobile ? null : createGalaxyBackground(scene);
 
     // ── Lights ───────────────────────────────────────────────────
-    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    dirLight.position.set(5, 10, 5);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
-    scene.add(dirLight);
-    const dirLight2 = new THREE.DirectionalLight(0xffffff, 2.0);
-    dirLight2.position.set(-5, 8, -5);
-    scene.add(dirLight2);
-    const frontLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    frontLight.position.set(0, 5, 10);
-    scene.add(frontLight);
-    const accentPt = new THREE.PointLight(0x6080ff, 0.6, 20);
-    accentPt.position.set(-3, 5, -3);
-    scene.add(accentPt);
-    const rimW = new THREE.DirectionalLight(0xffaa44, 1.5);
-    rimW.position.set(0, 4, -8);
-    scene.add(rimW);
-    const rimB = new THREE.DirectionalLight(0x88aaff, 1.0);
-    rimB.position.set(0, 3, 8);
-    scene.add(rimB);
+    if (isMobile) {
+      // Mobile: ambient + 1 directional top-down, no shadows
+      scene.add(new THREE.AmbientLight(0xffffff, 2.5));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      dirLight.position.set(0, 10, 0);
+      dirLight.castShadow = false;
+      scene.add(dirLight);
+    } else {
+      // PC: low ambient so shadows are visible
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+      // Light 1: top-down left — main, casts shadows
+      const topLeft = new THREE.DirectionalLight(0xffffff, 2.2);
+      topLeft.position.set(-4, 14, 0);
+      topLeft.target.position.set(0, 0, 0);
+      topLeft.castShadow = true;
+      topLeft.shadow.mapSize.set(1024, 1024);
+      topLeft.shadow.camera.near = 1;
+      topLeft.shadow.camera.far = 25;
+      topLeft.shadow.camera.left = -7;
+      topLeft.shadow.camera.right = 7;
+      topLeft.shadow.camera.top = 7;
+      topLeft.shadow.camera.bottom = -7;
+      topLeft.shadow.bias = -0.001;
+      scene.add(topLeft);
+      scene.add(topLeft.target);
+
+      // Light 2: top-down right — fill, no shadow
+      const topRight = new THREE.DirectionalLight(0xffffff, 1.4);
+      topRight.position.set(4, 14, 0);
+      topRight.castShadow = false;
+      scene.add(topRight);
+
+      // Light 3: left wall → board (cool blue tint)
+      const leftWall = new THREE.DirectionalLight(0xd0deff, 1.0);
+      leftWall.position.set(-12, 5, 0);
+      leftWall.castShadow = false;
+      scene.add(leftWall);
+
+      // Light 4: right wall → board (warm tint)
+      const rightWall = new THREE.DirectionalLight(0xffeedd, 1.0);
+      rightWall.position.set(12, 5, 0);
+      rightWall.castShadow = false;
+      scene.add(rightWall);
+
+      // Light 5: black piece fill — low front light to reveal dark figure details
+      const blackFill = new THREE.DirectionalLight(0xaaccff, 3.5);
+      blackFill.position.set(0, 3, 14); // from black side, low angle
+      blackFill.castShadow = false;
+      scene.add(blackFill);
+    }
 
     // ── Board (Phased Loading) ────────────────────────────────────
     const boardGrp = new THREE.Group();
@@ -132,16 +167,20 @@ export default function BattleChess3D() {
       model.scale.setScalar(0.45);
       model.traverse(node => {
         if (node.isMesh) {
-          node.receiveShadow = true;
-          node.castShadow = true;
+          node.receiveShadow = !isMobile;
+          node.castShadow = false;
           if (node.material) {
             const mats = Array.isArray(node.material) ? node.material : [node.material];
             mats.forEach(m => {
-              m.envMap = null; m.envMapIntensity = 0;
-              m.color.setHex(0xffffff); m.roughness = 1.0; m.metalness = 0.0;
-              if (m.specular) m.specular.setHex(0x000000);
-              if (m.shininess) m.shininess = 0;
+              m.envMap = null;
+              m.envMapIntensity = 0;
+              // Do NOT override color — preserve original texture
+              m.roughness = 0.85;   // matte, not shiny
+              m.metalness = 0.0;
+              if (m.specular) m.specular.setHex(0x111111); // kill specular
+              if (m.shininess !== undefined) m.shininess = 0;
               if (m.emissive) { m.emissive.setHex(0x000000); m.emissiveIntensity = 0; }
+              m.needsUpdate = true;
             });
           }
         }
@@ -149,24 +188,22 @@ export default function BattleChess3D() {
       boardGrp.add(model);
     }
 
-    // Phase 1: board + ground (lightweight, ~30MB total)
-    const phase1Total = 2;
+    // Phase 1: board + ground + figures + walls
+    const phase1Total = 4; // board, ground, figures, walls
     let phase1Loaded = 0;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const p1Board = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/board.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    const p1Figures = preloadModels().then(() => phase1tick());
 
-    Promise.all([p1Board, p1Ground]).then(() => {
+    Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
       setPhase1Ready(true);
-      // Phase 2: walls (80MB, streams silently)
-      gltfLoader.load(`${ASSET_CDN}/walls.glb`, (g) => {
+      // Decoration streams silently in background
+      gltfLoader.load(`${ASSET_CDN}/decoration.glb`, (g) => {
         addBoardModel(g);
-        // Phase 3: decoration (100MB, streams silently)
-        gltfLoader.load(`${ASSET_CDN}/decoration.glb`, (g2) => {
-          addBoardModel(g2);
-          setAllPhasesReady(true);
-        });
+        setAllPhasesReady(true);
       });
     });
 
@@ -442,6 +479,7 @@ export default function BattleChess3D() {
         const epK = `${fr},${tf}`;
         if (PM[epK]) { const ep = toWorld(fr, tf); particles.push(mkBurst({ x: ep.x, y: 0.3, z: ep.z }, THEME.whiteAccent)); scene.remove(PM[epK]); delete PM[epK]; }
       }
+      if (!movMesh) { afterAnim(); return; } // piece mesh not yet loaded, skip animation
       if (capMesh && !wasEP) battleAnim(movMesh, capMesh, tPos, capMesh.userData.color === W ? THEME.whiteAccent : THEME.blackAccent, afterAnim);
       else animPiece(movMesh, tPos, 0.42, afterAnim);
     }
@@ -693,6 +731,8 @@ export default function BattleChess3D() {
 
       if (galaxy && galaxy.tick) galaxy.tick(time);
       for (let i = particles.length - 1; i >= 0; i--) if (!particles[i]()) particles.splice(i, 1);
+
+      updateAntiqueStoneMaterials(camera);
       renderer.render(scene, camera);
     };
     animate(0);

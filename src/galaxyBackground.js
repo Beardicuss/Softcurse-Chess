@@ -1,255 +1,281 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { ASSET_CDN } from "./constants.js";
 
-/**
- * Galaxy Background
- * Loads the GLB, extracts vertex positions, renders as glowing particle system
- * matching the reference: bright white core fading to dark blue scattered stars
- */
 export function createGalaxyBackground(scene) {
-    const loader = new GLTFLoader();
 
-    // ── Procedural starfield (immediate, no loading needed) ──────
-    // Scattered background stars — tiny, dim, spread across a huge sphere
-    const starCount = 6000;
-    const starPositions = new Float32Array(starCount * 3);
-    const starSizes = new Float32Array(starCount);
-    const starColors = new Float32Array(starCount * 3);
+    // ── Galaxy plane — full GLSL shader ─────────────────────────
+    const galaxyMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: `
+            varying vec2 vUv;
+            void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+        `,
+        fragmentShader: `
+            uniform float uTime;
+            varying vec2 vUv;
+            #define PI 3.14159265
 
-    for (let i = 0; i < starCount; i++) {
-        // Random points on a large sphere shell
+            float hash(vec2 p){ p=fract(p*vec2(127.1,311.7)); p+=dot(p,p+19.19); return fract(p.x*p.y); }
+            float noise(vec2 p){
+                vec2 i=floor(p),f=fract(p); f=f*f*(3.0-2.0*f);
+                return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+            }
+            float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){v+=a*noise(p);p*=2.1;a*=0.5;} return v; }
+
+            void main() {
+                // Map UV to centered coords, apply elliptical shape like reference
+                vec2 uv = vUv - 0.5;
+
+                // Slow rotation
+                float rot = uTime * 0.012;
+                uv = vec2(cos(rot)*uv.x - sin(rot)*uv.y, sin(rot)*uv.x + cos(rot)*uv.y);
+
+                // Flatten to ellipse — reference has ~3:1 width:height ratio
+                vec2 uvEllipse = vec2(uv.x, uv.y * 3.2);
+                float r = length(uvEllipse);         // elliptical radius
+                float rRaw = length(uv);             // true radius for cutoff
+
+                float theta = atan(uv.y, uv.x);
+
+                // ── CORE: soft oval, warm white center → orange-red mid ──
+                float core     = exp(-r*r*38.0);                    // tight bright center
+                float coreWide = exp(-r*r*7.0);                     // orange glow zone
+                float coreFar  = exp(-rRaw*rRaw*4.5);               // faint outer warmth
+
+                vec3 coreWhite  = vec3(1.00, 0.97, 0.88);
+                vec3 coreOrange = vec3(0.88, 0.45, 0.15);
+                vec3 coreRed    = vec3(0.55, 0.20, 0.08);
+
+                vec3 coreCol = coreWhite;
+                coreCol = mix(coreCol, coreOrange, smoothstep(0.0, 0.18, r));
+                coreCol = mix(coreCol, coreRed,    smoothstep(0.12, 0.32, r));
+
+                // ── SPIRAL ARMS: 4 arms, blue, wide ──────────────────
+                // Arms use true UV not elliptical for natural spiral shape
+                float tight = 4.2;
+                float arm1 = exp(-pow(mod(theta - tight*log(max(length(uv),0.001)) + PI,       2.0*PI)-PI, 2.0)*10.0) * exp(-rRaw*2.2);
+                float arm2 = exp(-pow(mod(theta - tight*log(max(length(uv),0.001)) + PI + PI,  2.0*PI)-PI, 2.0)*10.0) * exp(-rRaw*2.2);
+                float arm3 = exp(-pow(mod(theta - tight*log(max(length(uv),0.001)) + PI*0.5,   2.0*PI)-PI, 2.0)*10.0) * exp(-rRaw*2.8) * 0.5;
+                float arm4 = exp(-pow(mod(theta - tight*log(max(length(uv),0.001)) + PI*1.5,   2.0*PI)-PI, 2.0)*10.0) * exp(-rRaw*2.8) * 0.5;
+                float arms = arm1 + arm2 + arm3 + arm4;
+
+                // Turbulence — gives arms fluffy irregular edges
+                vec2 noiseUv = uv * 4.0 + vec2(uTime*0.003, uTime*0.002);
+                float turb = fbm(noiseUv);
+                arms *= 0.5 + turb * 0.9;
+
+                // Arm color: deep blue outer → blue-white mid → warm near core
+                vec3 armBlue  = vec3(0.05, 0.18, 0.75);
+                vec3 armMid   = vec3(0.30, 0.55, 1.00);
+                vec3 armWarm  = vec3(0.80, 0.72, 0.55);
+                vec3 armCol   = mix(armBlue, armMid, smoothstep(0.4, 0.1, rRaw));
+                armCol        = mix(armCol,  armWarm, coreWide * 0.7);
+
+                // ── DUST LANES: dark bands between spiral arms ────────
+                float dustA = theta - tight * log(max(length(uv), 0.001));
+                float dust1 = smoothstep(0.07, 0.0, abs(sin(dustA + 0.5))) * exp(-rRaw * 4.0);
+                float dust2 = smoothstep(0.07, 0.0, abs(sin(dustA + PI + 0.7))) * exp(-rRaw * 4.0);
+                float dust  = (dust1 + dust2) * 0.7;
+
+                // ── OUTER HALO ────────────────────────────────────────
+                float halo    = exp(-rRaw*rRaw*2.2) * 0.08;
+                vec3  haloCol = vec3(0.05, 0.09, 0.30);
+
+                // ── COMBINE ───────────────────────────────────────────
+                vec3 col = vec3(0.0);
+                col += coreCol * (core * 3.5 + coreWide * 0.8 + coreFar * 0.15);
+                col += armCol  * arms * 2.2;
+                col -= vec3(0.03, 0.02, 0.01) * dust * 25.0;  // darken dust lanes
+                col += haloCol * halo;
+
+                // Alpha: fade at ellipse edge, hard cutoff beyond
+                float edgeFade = smoothstep(0.50, 0.22, rRaw);
+                float alpha = clamp(core*3.0 + arms*2.0 + coreWide*0.6 + halo, 0.0, 1.0) * edgeFade;
+
+                gl_FragColor = vec4(col, alpha);
+            }
+        `,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+    });
+
+    // Galaxy plane: wide, flat, tilted — far back
+    const galaxyPlane = new THREE.Mesh(new THREE.PlaneGeometry(72, 28), galaxyMat);
+    galaxyPlane.position.set(1, 9, -38);
+    galaxyPlane.rotation.x = 0.22;   // tilt to match reference perspective
+    galaxyPlane.rotation.z = -0.08;  // slight roll
+    scene.add(galaxyPlane);
+
+    // ── Foreground stars ─────────────────────────────────────────
+    // 2000 background + 70 bright with spike glow — scattered like reference
+    const sCount  = 2000;
+    const sBright = 70;
+    const sPos    = new Float32Array(sCount * 3);
+    const sCol    = new Float32Array(sCount * 3);
+    const sSize   = new Float32Array(sCount);
+
+    for (let i = 0; i < sCount; i++) {
         const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = 40 + Math.random() * 20;
-        starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-        starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        starPositions[i * 3 + 2] = r * Math.cos(phi);
+        const phi   = Math.acos(2 * Math.random() - 1);
+        const r     = 36 + Math.random() * 24;
+        sPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+        sPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+        sPos[i*3+2] = r * Math.cos(phi);
 
-        // Vary size — most tiny, few slightly larger
-        starSizes[i] = Math.random() < 0.95 ? 0.3 + Math.random() * 0.4 : 0.8 + Math.random() * 0.6;
-
-        // Color: mostly cold white-blue, occasional warm
-        const warm = Math.random() < 0.08;
-        starColors[i * 3] = warm ? 1.0 : 0.7 + Math.random() * 0.3;
-        starColors[i * 3 + 1] = warm ? 0.85 : 0.85 + Math.random() * 0.15;
-        starColors[i * 3 + 2] = warm ? 0.6 : 1.0;
+        const type = Math.random();
+        if (type < 0.30) {
+            // Blue-white stars (dominant in reference)
+            sCol[i*3]=0.55+Math.random()*0.3; sCol[i*3+1]=0.78+Math.random()*0.18; sCol[i*3+2]=1.0;
+        } else if (type < 0.40) {
+            // Warm orange stars
+            sCol[i*3]=1.0; sCol[i*3+1]=0.72+Math.random()*0.15; sCol[i*3+2]=0.35+Math.random()*0.25;
+        } else {
+            // Pure white
+            sCol[i*3]=0.90+Math.random()*0.10; sCol[i*3+1]=0.93+Math.random()*0.07; sCol[i*3+2]=1.0;
+        }
+        sSize[i] = i < sBright ? 2.2 + Math.random() * 3.0 : 0.10 + Math.random() * 0.28;
     }
 
-    const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    starGeo.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
+    const sGeo = new THREE.BufferGeometry();
+    sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
+    sGeo.setAttribute("color",    new THREE.BufferAttribute(sCol, 3));
+    sGeo.setAttribute("size",     new THREE.BufferAttribute(sSize, 1));
 
-    const starMat = new THREE.PointsMaterial({
-        size: 0.12,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.85,
-        sizeAttenuation: true,
-        depthWrite: false,
+    const sMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: `
+            attribute float size; attribute vec3 color;
+            varying vec3 vColor; varying float vSize;
+            uniform float uTime;
+            void main() {
+                vColor=color; vSize=size;
+                vec4 mvPos=modelViewMatrix*vec4(position,1.0);
+                float tw=1.0+0.20*sin(uTime*2.5+position.x*13.1+position.z*8.3);
+                gl_PointSize=size*tw*(270.0/-mvPos.z);
+                gl_Position=projectionMatrix*mvPos;
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vColor; varying float vSize;
+            void main(){
+                vec2 uv=gl_PointCoord-0.5;
+                float d=length(uv);
+                if(d>0.5) discard;
+                float alpha=pow(1.0-smoothstep(0.0,0.5,d),1.2);
+                // 4-point cross spike for bright stars
+                if(vSize>1.8){
+                    float hSpike=exp(-abs(uv.x)*22.0)*exp(-abs(uv.y)*5.0);
+                    float vSpike=exp(-abs(uv.y)*22.0)*exp(-abs(uv.x)*5.0);
+                    float dSpike=exp(-abs(uv.x+uv.y)*28.0)*exp(-abs(uv.x-uv.y)*8.0)*0.4;
+                    alpha=max(alpha, max(hSpike,vSpike)*0.85);
+                    alpha=max(alpha, dSpike);
+                }
+                gl_FragColor=vec4(vColor,alpha);
+            }
+        `,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
     });
 
-    const stars = new THREE.Points(starGeo, starMat);
+    const stars = new THREE.Points(sGeo, sMat);
     scene.add(stars);
 
-    // ── GLB-based galaxy core particle system ────────────────────
-    loader.load(`${ASSET_CDN}/space.glb`, (gltf) => {
-        // Extract all vertex positions from all meshes in the GLB
-        const allPositions = [];
-        gltf.scene.traverse((node) => {
-            if (!node.isMesh) return;
-            const geo = node.geometry;
-            const pos = geo.attributes.position;
-            if (!pos) return;
+    // ── Sparse arm particles — 500, placed on spiral curves ──────
+    const pCount = 500;
+    const pPos   = new Float32Array(pCount * 3);
+    const pCol   = new Float32Array(pCount * 3);
+    const pSize  = new Float32Array(pCount);
 
-            // Apply the node's world transform to each vertex
-            const mat = new THREE.Matrix4();
-            node.updateWorldMatrix(true, false);
-            mat.copy(node.matrixWorld);
+    for (let i = 0; i < pCount; i++) {
+        const arm    = Math.floor(Math.random() * 2);
+        const t      = 0.08 + Math.random() * 0.88;
+        const angle  = t * Math.PI * 4.2 + arm * Math.PI;
+        const radius = t * 26.0;
+        const sx     = (Math.random()-0.5) * 4.0 * (0.4 + t*0.6);
+        const sy     = (Math.random()-0.5) * 0.8 * (1.0-t*0.6);
 
-            const vec = new THREE.Vector3();
-            for (let i = 0; i < pos.count; i++) {
-                vec.fromBufferAttribute(pos, i);
-                vec.applyMatrix4(mat);
-                allPositions.push(vec.x, vec.y, vec.z);
+        // Match galaxy plane position
+        pPos[i*3]   =  Math.cos(angle)*radius + sx;
+        pPos[i*3+1] =  sy + 9.0;
+        pPos[i*3+2] = (Math.sin(angle)*radius*0.38 + sx*0.38) - 38.0;
+
+        const norm = Math.min(radius/26.0, 1.0);
+        if (norm < 0.15) {
+            pCol[i*3]=1.0; pCol[i*3+1]=0.95; pCol[i*3+2]=0.82;
+            pSize[i]=0.9+Math.random()*1.1;
+        } else if (norm < 0.5) {
+            pCol[i*3]=0.5+Math.random()*0.3; pCol[i*3+1]=0.7+Math.random()*0.2; pCol[i*3+2]=1.0;
+            pSize[i]=0.4+Math.random()*0.55;
+        } else {
+            pCol[i*3]=0.1+Math.random()*0.2; pCol[i*3+1]=0.25+Math.random()*0.2; pCol[i*3+2]=0.75+Math.random()*0.25;
+            pSize[i]=0.18+Math.random()*0.3;
+        }
+    }
+
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+    pGeo.setAttribute("color",    new THREE.BufferAttribute(pCol, 3));
+    pGeo.setAttribute("size",     new THREE.BufferAttribute(pSize, 1));
+
+    const pMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: `
+            attribute float size; attribute vec3 color;
+            varying vec3 vColor; uniform float uTime;
+            void main(){
+                vColor=color;
+                vec4 mvPos=modelViewMatrix*vec4(position,1.0);
+                float sh=1.0+0.1*sin(uTime*1.6+position.x*0.4+position.z*0.6);
+                gl_PointSize=size*sh*(200.0/-mvPos.z);
+                gl_Position=projectionMatrix*mvPos;
             }
-        });
-
-        if (allPositions.length === 0) {
-            console.warn("Galaxy GLB: no vertices found");
-            return;
-        }
-
-        const rawPos = new Float32Array(allPositions);
-
-        // Find bounding box to calculate center and scale
-        let minX = Infinity, minY = Infinity, minZ = Infinity;
-        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-        for (let i = 0; i < rawPos.length; i += 3) {
-            if (rawPos[i] < minX) minX = rawPos[i];
-            if (rawPos[i] > maxX) maxX = rawPos[i];
-            if (rawPos[i + 1] < minY) minY = rawPos[i + 1];
-            if (rawPos[i + 1] > maxY) maxY = rawPos[i + 1];
-            if (rawPos[i + 2] < minZ) minZ = rawPos[i + 2];
-            if (rawPos[i + 2] > maxZ) maxZ = rawPos[i + 2];
-        }
-
-        const cx = (minX + maxX) / 2;
-        const cy = (minY + maxY) / 2;
-        const cz = (minZ + maxZ) / 2;
-        const maxDim = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
-        const targetSize = 55; // how big the galaxy should be in world units
-        const scaleFactor = targetSize / (maxDim || 1);
-
-        const N = rawPos.length / 3;
-        const positions = new Float32Array(N * 3);
-        const colors = new Float32Array(N * 3);
-        const sizes = new Float32Array(N);
-
-        for (let i = 0; i < N; i++) {
-            const x = (rawPos[i * 3] - cx) * scaleFactor;
-            const y = (rawPos[i * 3 + 1] - cy) * scaleFactor;
-            const z = (rawPos[i * 3 + 2] - cz) * scaleFactor;
-
-            positions[i * 3] = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
-
-            // Distance from center drives color and size
-            const dist = Math.sqrt(x * x + y * y + z * z);
-            const normDist = Math.min(dist / (targetSize * 0.5), 1.0);
-
-            // Core: bright white → mid: blue-white → edge: dark navy
-            if (normDist < 0.15) {
-                // Bright white core
-                colors[i * 3] = 1.0;
-                colors[i * 3 + 1] = 1.0;
-                colors[i * 3 + 2] = 1.0;
-                sizes[i] = 1.2 + Math.random() * 1.0;
-            } else if (normDist < 0.4) {
-                // Blue-white transition
-                const t = (normDist - 0.15) / 0.25;
-                colors[i * 3] = 1.0 - t * 0.4;
-                colors[i * 3 + 1] = 1.0 - t * 0.3;
-                colors[i * 3 + 2] = 1.0;
-                sizes[i] = 0.6 + Math.random() * 0.6;
-            } else {
-                // Dark blue outer stars
-                const t = Math.min((normDist - 0.4) / 0.6, 1.0);
-                colors[i * 3] = 0.1 + (1 - t) * 0.3;
-                colors[i * 3 + 1] = 0.15 + (1 - t) * 0.35;
-                colors[i * 3 + 2] = 0.3 + (1 - t) * 0.5;
-                sizes[i] = 0.2 + Math.random() * 0.3;
+        `,
+        fragmentShader: `
+            varying vec3 vColor;
+            void main(){
+                vec2 uv=gl_PointCoord-0.5; float d=length(uv);
+                if(d>0.5) discard;
+                float a=pow(1.0-smoothstep(0.0,0.5,d),1.6)*0.8;
+                gl_FragColor=vec4(vColor,a);
             }
-        }
-
-        const galaxyGeo = new THREE.BufferGeometry();
-        galaxyGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        galaxyGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        galaxyGeo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
-
-        // Custom shader for smooth circular particles with glow
-        const galaxyMat = new THREE.ShaderMaterial({
-            uniforms: {
-                uTime: { value: 0 },
-            },
-            vertexShader: `
-                attribute float size;
-                attribute vec3 color;
-                varying vec3 vColor;
-                varying float vDist;
-                uniform float uTime;
-
-                void main() {
-                    vColor = color;
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    // Subtle slow rotation shimmer
-                    float shimmer = 1.0 + 0.08 * sin(uTime * 0.4 + position.x * 0.1 + position.z * 0.1);
-                    gl_PointSize = size * shimmer * (300.0 / -mvPosition.z);
-                    gl_Position = projectionMatrix * mvPosition;
-                    vDist = length(position) / 27.5;
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vColor;
-                varying float vDist;
-
-                void main() {
-                    // Circular soft particle
-                    vec2 uv = gl_PointCoord - vec2(0.5);
-                    float d = length(uv);
-                    if (d > 0.5) discard;
-
-                    // Soft glow falloff
-                    float alpha = 1.0 - smoothstep(0.0, 0.5, d);
-                    alpha = pow(alpha, 1.4);
-
-                    // Fade out at edges of galaxy
-                    float edgeFade = 1.0 - smoothstep(0.6, 1.0, vDist);
-                    alpha *= edgeFade;
-
-                    gl_FragColor = vec4(vColor, alpha * 0.9);
-                }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-            vertexColors: true,
-        });
-
-        const galaxy = new THREE.Points(galaxyGeo, galaxyMat);
-
-        // Tilt to match the elliptical shape in the reference image
-        galaxy.rotation.x = Math.PI * 0.15;
-        galaxy.rotation.z = Math.PI * 0.05;
-
-        // Push far behind the chess scene
-        galaxy.position.set(0, 8, -30);
-
-        scene.add(galaxy);
-
-        // ── Bright glowing core overlay ──────────────────────────
-        // A soft sprite at the center for the intense core bloom
-        const coreGeo = new THREE.BufferGeometry();
-        coreGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
-
-        const coreMat = new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: `
-                uniform float uTime;
-                void main() {
-                    gl_PointSize = 180.0 + 20.0 * sin(uTime * 0.5);
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                void main() {
-                    vec2 uv = gl_PointCoord - vec2(0.5);
-                    float d = length(uv);
-                    if (d > 0.5) discard;
-                    float alpha = pow(1.0 - d * 2.0, 2.5) * 0.6;
-                    gl_FragColor = vec4(0.85, 0.92, 1.0, alpha);
-                }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
-
-        const core = new THREE.Points(coreGeo, coreMat);
-        core.position.copy(galaxy.position);
-        scene.add(core);
-
-        // Return update function so render loop can animate shimmers
-        return { galaxy, core, galaxyMat, coreMat };
+        `,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
     });
 
-    // ── Slow rotation for the background star field ──────────────
-    // Returns an update tick to call in the render loop
+    const armParticles = new THREE.Points(pGeo, pMat);
+    scene.add(armParticles);
+
+    // ── Small companion galaxy (bottom-center in reference) ───────
+    const compMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+        fragmentShader: `
+            varying vec2 vUv;
+            void main(){
+                vec2 uv=vUv-0.5; uv.y*=2.0;
+                float r=length(uv);
+                float core=exp(-r*r*50.0);
+                float halo=exp(-r*r*10.0)*0.22;
+                float alpha=(core+halo)*smoothstep(0.36,0.06,r)*0.9;
+                vec3 col=mix(vec3(0.15,0.35,0.95),vec3(1.0,1.0,1.0),core*2.5);
+                gl_FragColor=vec4(col,alpha);
+            }
+        `,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    });
+    const comp = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), compMat);
+    comp.position.set(0, 2, -26);
+    comp.rotation.x = 0.15;
+    scene.add(comp);
+
     return {
         tick(t) {
-            stars.rotation.y = t * 0.008;
-            stars.rotation.x = t * 0.003;
+            const T = t * 0.001;
+            galaxyMat.uniforms.uTime.value = T;
+            sMat.uniforms.uTime.value      = T;
+            pMat.uniforms.uTime.value      = T;
+            stars.rotation.y        = T * 0.006;
+            armParticles.rotation.y = T * 0.006;
         }
     };
 }
