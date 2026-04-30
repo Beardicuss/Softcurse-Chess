@@ -789,10 +789,12 @@ export default function ChessUI({
     const { t } = useLang();
     const LOADING_MSGS = [t.LOADING_1, t.LOADING_2, t.LOADING_3];
     const [loadMsgIdx, setLoadMsgIdx] = useState(0);
-    const isWt = msg.includes("WHITE");
-    const mc = msg.includes("WINS") ? "#c5a059"
-        : msg.includes("CHECK") && !msg.includes("CHECKMATE") ? "#5f0505"
-            : isWt ? "#efe6a0" : "#5f0505";
+    const isWt = msg.includes("_W") || msg.includes("WHITE");
+    const isDraw = msg.includes("STALEMATE") || msg.includes("DRAW");
+    const mc = msg.includes("MATE") || msg.includes("WINS") ? "#c5a059"
+        : isDraw ? "#88aaaa"
+            : msg.includes("CHECK") ? "#ff4444"
+                : isWt ? "#efe6a0" : "#ff7777";
 
     const hasSave = !!localStorage.getItem("battleChessSave");
     const [paused, setPaused] = useState(false);
