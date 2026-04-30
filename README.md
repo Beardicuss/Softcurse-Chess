@@ -1,41 +1,20 @@
 <div align="center">
-  <img src="public/assets/poster.png" alt="Softcurse's Chess Logo" />
+  <img src="public/assets/poster.png" alt="Softcurse's Chess Logo" width="600"/>
 
   # Softcurse's Chess
-
+  
   **An epic, high-fidelity 3D chess engine blurring the line between Heavens and Underworld.**
 
-  [![Build Status](https://img.shields.io/github/actions/workflow/status/Beardicuss/Softcurse-Chess/ci.yml?branch=main&style=for-the-badge)](https://github.com/Beardicuss/Softcurse-Chess/actions)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-  [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-  [![Three.js](https://img.shields.io/badge/Three.js-black?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
-  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-
+  [Official Website](https://softcurse-website.pages.dev/)
 </div>
 
 ---
 
-## 📖 Table of Contents
-- [Overview](#-overview)
-- [✨ Features](#-features)
-- [📦 Installation](#-installation)
-- [🚀 Quick Start](#-quick-start)
-- [🔧 Configuration](#-configuration)
-- [🏗️ Architecture](#️-architecture)
-- [🧪 Testing](#-testing)
-- [🤝 Contributing](#-contributing)
-- [🛣️ Roadmap](#️-roadmap)
-- [📄 License](#-license)
-- [👥 Acknowledgements](#-acknowledgements)
-- [💬 Support](#-support)
+## 🏔 The Game
 
----
+**Softcurse's Chess** is a fully standalone, cinematic chess experience designed to push modern browser graphics APIs to their limits. Through a masterfully crafted procedural terrain separating Angelic forces and Demonic legions, we leverage raw shader logic and geometry definitions directly within the client bounds to assemble a breathtaking, high-fidelity PBR environment that plays beautifully on modern desktop systems.
 
-## 🏔 Overview
-
-**Softcurse's Chess**  is a purely web-based, cinematic chess experience designed to push modern browser graphics APIs to their limits. Through a masterfully crafted procedural terrain separating Angelic forces and Demonic legions, we leverage `Three.js` directly within `React` state boundaries to assemble a breathtaking, high-fidelity PBR environment that plays beautifully on modern desktops.
-
-Whether you're a framework engineer exploring complex state orchestration with `React Fiber` parallels, a technical artist interested in PMREM volumetric global illumination maps and WebGL overlays, or simply a chess fanatic looking for a spectacular fight against an embedded AI, **Softcurse's Chess** is the definitive open-source cinematic chess laboratory.
+Whether you're a tactician exploring the asymmetric local Minimax structure, a casual player enjoying the orbital UI, or simply a chess fanatic looking for a spectacular fight against our sophisticated AI, **Softcurse's Chess** stands as a definitive cinematic chess laboratory.
 
 ---
 
@@ -43,134 +22,111 @@ Whether you're a framework engineer exploring complex state orchestration with `
 
 - **PBR Render Physics:** Fully baked PBR texture integration driving obsidian glass shading, pearlescent marbles, and magma emissions.
 - **Cinematic Workflow Operations:** Fully animated splash screens, orbital menu loops, procedural `burst` meshes on capture, and logic-locked orbital cameras.
-- **Battle AI Implementation:** Asymmetric local Minimax/Alpha-Beta search algorithms processing local graph nodes directly adjacent to UI component layouts.
-- **Intelligent Serialization:** LocalStorage based cache indexing securing ongoing matches securely through the `AI Save Memory`.
+- **Battle AI Implementation:** Asymmetric local AI models featuring adaptive difficulty states (from Recruit to Grandmaster) processing directly on the client.
+- **Seamless Integrations:** Features dynamic language loading architectures ensuring your experience translates seamlessly to English, Russian, and Georgian globally.
 - **Procedural Audio Engine:** Dynamic WebAudio frequency synthesis computing unique sonic envelopes during moves, checks, and physical mesh clashes.
 
 ---
 
-## 📦 Installation
+## 🏗 About The Architect
 
-To play, experiment, or build directly with the source code, utilize Node.js and the Vite bundler architecture.
+### Softcurse Systems
 
-### Prerequisites
-- Node.js (v18.x or newer recommended)
-- `npm` or `yarn` installed natively on your environment
+**Forged in shadow. Engineered for control. Built for the future.**
 
-### Setup
+Softcurse Systems is not merely a software label. It is a growing digital infrastructure forged to create powerful systems, premium software ecosystems, and performance-driven platforms that merge technical precision with visionary design.
 
-```bash
-# 1. Clone the repository 
-git clone https://github.com/Beardicuss/Softcurse-Chess.git
-
-# 2. Drop into the directory 
-cd Softcurse-Chess
-
-# 3. Pull all package dependencies 
-npm install
-```
+Where most brands build tools, Softcurse builds fortified environments.
 
 ---
 
-## 🚀 Quick Start
+#### Core Purpose
 
-To spin up a local development instance of the renderer:
+Softcurse Systems specializes in the creation of:
 
-```bash
-# Deploys a live Vite HMR streaming server
-npm run dev
-```
-> The terminal will display your localhost port (typically `http://localhost:5173`). Simply navigate to this URI in a modern WebGL-accelerated browser!
+* Advanced software architecture
+* High-performance web systems
+* Secure administrative infrastructure
+* API and credential management environments
+* Premium digital branding ecosystems
+* Scalable deployment solutions
 
-To package a minified production deployment chunk folder (`dist/`):
-```bash
-npm run build
-```
+Every project is designed with a singular philosophy:
 
----
-
-## 🔧 Configuration
-
-While **Softcurse's Chess** avoids cumbersome dotfile configurations in favor of functional immutability, visual parameters sit neatly tucked inside pure constant maps.
-
-Inside `/src/constants.js`:
-```javascript
-export const THEME = {
-    bg: 0x0a0a0c,              // The absolute Void backdrop
-    fogDensity: 0.018,         // Volumetric fog absorption limits
-    boardBase: 0x111111,       // Raw baseline albedo limits 
-    whiteAccent: 0x00ffff,     // Cyan bursts for Heaven captures
-    blackAccent: 0xff00aa      // Magenta neon for Hell executions
-};
-```
-Change these directly to dramatically morph the structural aesthetic of the battlefield. 
+**Power. Stability. Precision.**
 
 ---
 
-## 🏗️ Architecture
+#### Design Philosophy
 
-```mermaid
-graph TD;
-    A[React Root / main.jsx] --> B[BattleChess3D.jsx Orchestrator]
-    B --> C[ChessUI.jsx Menu Shell]
-    B --> D[Three.js Pipeline]
-    
-    D --> E[pieceFactory.js GLTF Models]
-    D --> F[Procedural Grid Logic]
-    D --> G[galaxyBackground.js Particles]
-    
-    B --> H[chessEngine.js Core Logic]
-    H --> I[aiEngine.js Decision Tree]
-```
+Softcurse embraces a dark-futuristic identity where software is treated as engineered infrastructure rather than disposable products.
 
-### Key Subsystems:
-- **`BattleChess3D.jsx`:** The core master orchestrator maintaining coordinate bridges between React memory refs and ThreeJS raw geometry graphs.
-- **`chessEngine.js`:** Pure functional dependency mapping game rules, threefold repetitions, un-do states, and legal movement offsets.
-- **`pieceFactory.js`:** GLTFLoader encapsulation caching the intensive 3MF/GLB polygon models on application boot.
+**Principles:**
+* Performance-first engineering
+* Secure system architecture
+* Elegant control interfaces
+* Enterprise-grade aesthetics
+* Scalable innovation
+* Relentless optimization
+
+This is software crafted not for noise, but for dominance.
 
 ---
 
-## 🧪 Testing
+#### Vision
 
-Given that much of the code is strictly tied into graphical bounds rendering limits, manual integration testing remains our priority standard protocol path. Check back post v1.8 for standard unit implementations mapped against the `chessEngine` discrete logical bounds.
+Softcurse Systems aims to become a unified technological ecosystem capable of delivering:
 
----
+* Backend frameworks
+* Developer management tools
+* Secure cloud-connected systems
+* Interactive software platforms
+* Branded digital experiences
 
-## 🤝 Contributing
-
-We welcome the entire developer community! Whether it's adding a new lighting mechanism, increasing the performance bounds of the `aiEngine`, or patching an obscure WebGL fallback, your PRs are celebrated.
-
-Read our [Contributing Guide](.github/CONTRIBUTING.md) to understand branch structures and the conventional commit framework used. Don't forget to review our [Code of Conduct](.github/CODE_OF_CONDUCT.md).
-
----
-
-## 🛣️ Roadmap
-
-- [ ] **Multiplayer Architecture:** WebRTC or custom WebSocket signaling servers permitting P2P matchmaking securely over standard proxy.
-- [ ] **Enhanced AI Engine:** WebWorker offloading of minimax calculation to eliminate main-thread stalling during `COMMANDER` difficulty.
-- [ ] **Castling Shaders:** Expanding custom collision particles during King/Rook Castling swaps.
-- [ ] **Mobile Touch Support:** Reworking pointer interaction arrays and mesh bounding box raycast hits to accommodate thick mobile interactions smoothly.
+From web architecture to software control vaults, every system is designed to operate with precision and authority.
 
 ---
 
-## 📄 License
+#### The Softcurse Standard
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Softcurse software is built around:
 
-> Permits commercial application, personal modifications, and distribution inherently free of encumbrance assuming general attribution constraints intact.
+* Stability under pressure
+* Efficient resource management
+* Modern deployment strategies
+* Secure operational frameworks
+* Sophisticated user experience
+
+In simpler terms:
+
+**Elegant systems. Brutal efficiency.**
 
 ---
 
-## 👥 Acknowledgements
+#### Beyond Development (Softcurse Studios)
 
-- **Softcurse Lab** - The sole architecture, design, and structural development base.
-- **Creality Cloud Community** - Foundational geometry models heavily adapted via mesh decimation routines.
-- **AmbientCG** - Incredible CC0 PBR textures defining our materials structure.
+Softcurse is not confined to software alone. Under the **Softcurse Studios** banner, it represents a broader creative and technological force focused on:
+
+* Game development
+* Software products
+* Infrastructure solutions
+* Brand identity
+* Digital innovation
+
+Each creation serves as part of an expanding ecosystem engineered to leave an unmistakable mark.
 
 ---
 
-## 💬 Support
+#### Statement
 
-If you run into missing graphics, matrix crashes, or weird behaviors in the logic loop:
-- Feel free to directly document findings by dropping a [Bug Report Template](https://github.com/Beardicuss/Softcurse-Chess/issues).
-- Want to just chat concepts? Use GitHub Discussions natively hosted within the repository!
+**Softcurse Systems** exists for those who demand more than ordinary software.
+
+For creators.
+For builders.
+For architects of powerful digital worlds.
+
+---
+
+**Architecting the future through shadow, precision, and uncompromising innovation.**
+
+🌐 [Softcurse Systems Official Website](https://softcurse-website.pages.dev/)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { W, B } from "./chessEngine.js";
 import { SYM_W, SYM_B, ASSET_CDN } from "./constants.js";
+import { useLang, langCodes } from "./i18n.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  CHESS UI — Main Menu + HUD overlay
@@ -219,6 +220,7 @@ function Crest() {
 
 // ── New Game sub-panel ───────────────────────────────────────
 function NewGamePanel({ onStart, onBack, allPhasesReady }) {
+    const { t } = useLang();
     const [step, setStep] = useState("mode"); // "mode" | "side" | "difficulty" | "join" | "waiting"
     const [mode, setMode] = useState(null);
     const [side, setSide] = useState("w"); // "w" (Angels) | "b" (Demons)
@@ -243,26 +245,26 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
     };
 
     const handleCreateRoom = async () => {
-        setOnlineStatus("Creating room...");
+        setOnlineStatus(t.CONNECTING);
         setStep("waiting");
         try {
             const { createRoom, on } = await import("./onlineEngine.js");
             const code = await createRoom();
             setRoomCode(code);
-            setOnlineStatus("Waiting for opponent...");
+            setOnlineStatus(t.WAITING_OPP);
             on("assigned", (s) => setSide(s));
             on("start", () => {
                 onStart({ mode: "online", diff: null, side: side });
             });
         } catch (e) {
-            setOnlineStatus("Failed to create room");
+            setOnlineStatus(t.FAILED_CREATE);
             console.error(e);
         }
     };
 
     const handleJoinRoom = async () => {
         if (!joinInput.trim()) return;
-        setOnlineStatus("Joining room...");
+        setOnlineStatus(t.JOINING);
         setStep("waiting");
         try {
             const { joinRoom, on } = await import("./onlineEngine.js");
@@ -274,9 +276,9 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             on("start", () => {
                 onStart({ mode: "online", diff: null, side: side });
             });
-            setOnlineStatus("Connected! Waiting for game to start...");
+            setOnlineStatus(t.CONNECTED);
         } catch (e) {
-            setOnlineStatus("Failed to join room");
+            setOnlineStatus(t.FAILED_JOIN);
             setStep("join");
             console.error(e);
         }
@@ -287,32 +289,32 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             {step === "mode" && (
                 <>
                     <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
-                        SELECT MODE
+                        {t.SELECT_MODE}
                     </div>
                     <button className="menu-item" onClick={() => handleModeSelect("ai")}>
                         <span className="menu-icon">🤖</span>
-                        PLAYER VS AI
+                        {t.PLAYER_VS_AI}
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("pvp")}>
                         <span className="menu-icon">⚔</span>
-                        LOCAL PVP
+                        {t.LOCAL_PVP}
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("online_create")}>
                         <span className="menu-icon">🌐</span>
-                        ONLINE PVP
+                        {t.ONLINE_PVP}
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("online_join")}>
                         <span className="menu-icon">🔗</span>
-                        JOIN GAME
+                        {t.JOIN_GAME}
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("ai_vs_ai")}>
                         <span className="menu-icon">📽</span>
-                        AI VS AI
+                        {t.AI_VS_AI}
                     </button>
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
-                        BACK
+                        {t.BACK}
                     </button>
                 </>
             )}
@@ -320,7 +322,7 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             {step === "join" && (
                 <>
                     <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
-                        ENTER ROOM CODE
+                        {t.ENTER_ROOM_CODE}
                     </div>
                     <input
                         type="text"
@@ -340,12 +342,12 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     />
                     <button className="menu-item" onClick={handleJoinRoom}>
                         <span className="menu-icon">▶</span>
-                        JOIN
+                        {t.JOIN}
                     </button>
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
-                        BACK
+                        {t.BACK}
                     </button>
                 </>
             )}
@@ -353,7 +355,7 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             {step === "waiting" && (
                 <>
                     <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
-                        {roomCode ? "ROOM CODE" : "CONNECTING..."}
+                        {roomCode ? t.ROOM_CODE : t.CONNECTING}
                     </div>
                     {roomCode && (
                         <div style={{
@@ -378,13 +380,13 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     </div>
                     {roomCode && (
                         <div style={{ color: "rgba(197,160,89,0.3)", fontSize: "11px", textAlign: "center", marginBottom: 20 }}>
-                            Share this code with your opponent
+                            {t.SHARE_CODE}
                         </div>
                     )}
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={() => { setStep("mode"); setRoomCode(""); }} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
-                        CANCEL
+                        {t.CANCEL}
                     </button>
                 </>
             )}
@@ -392,20 +394,20 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             {step === "side" && (
                 <>
                     <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
-                        CHOOSE YOUR SIDE
+                        {t.CHOOSE_SIDE}
                     </div>
                     <button className="menu-item" onClick={() => { setSide("w"); setStep("difficulty"); }}>
                         <span className="menu-icon">👼</span>
-                        ANGELS (WHITE)
+                        {t.ANGELS}
                     </button>
                     <button className="menu-item" onClick={() => { setSide("b"); setStep("difficulty"); }}>
                         <span className="menu-icon">😈</span>
-                        DEMONS (BLACK)
+                        {t.DEMONS}
                     </button>
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
-                        BACK
+                        {t.BACK}
                     </button>
                 </>
             )}
@@ -413,14 +415,14 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             {step === "difficulty" && (
                 <>
                     <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
-                        CHOOSE DIFFICULTY
+                        {t.CHOOSE_DIFF}
                     </div>
 
                     {[
-                        { key: "RECRUIT", icon: "🌿", desc: "Casual — for learning", col: "#00ffff" },
-                        { key: "SOLDIER", icon: "⚔", desc: "Balanced — fair challenge", col: "#c5a059" },
-                        { key: "COMMANDER", icon: "💀", desc: "Brutal — may take 3–8s/move", col: "#ff0044" },
-                        { key: "GRANDMASTER", icon: "🧠", desc: "Cloud AI — real neural engine", col: "#bf5af2" },
+                        { key: t.DIFF_1, icon: "🌿", desc: t.DIFF_1_DESC, col: "#00ffff" },
+                        { key: t.DIFF_2, icon: "⚔", desc: t.DIFF_2_DESC, col: "#c5a059" },
+                        { key: t.DIFF_3, icon: "💀", desc: t.DIFF_3_DESC, col: "#ff0044" },
+                        { key: t.DIFF_4, icon: "🧠", desc: t.DIFF_4_DESC, col: "#bf5af2" },
                     ].map(({ key, icon, desc, col }) => (
                         <button
                             key={key}
@@ -450,7 +452,7 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                                 <div style={{ fontWeight: 700 }}>{key}</div>
                                 <div style={{ fontSize: "13px", opacity: 0.7, letterSpacing: "1.5px", marginTop: "4px" }}>{desc}</div>
                             </div>
-                            {diff === key && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ SELECTED</span>}
+                            {diff === key && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ {t.SELECTED}</span>}
                         </button>
                     ))}
 
@@ -475,11 +477,11 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,0.35)"}
                         onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,0.25)"}
                     >
-                        ⚔ START BATTLE
+                        ⚔ {t.START_BATTLE}
                     </button>
                     <button className="menu-item" onClick={() => setStep("side")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
-                        BACK
+                        {t.BACK}
                     </button>
                 </>
             )}
@@ -489,20 +491,68 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
 // ── Credits panel ────────────────────────────────────────────
 function CreditsPanel({ onBack }) {
+    const { t } = useLang();
     return (
-        <div className="sub-panel" style={{ width: "100%", textAlign: "center" }}>
-            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700 }}>CREDITS</div>
-            <div style={{ color: "rgba(197,160,89,0.8)", fontSize: "15px", lineHeight: 2.4, letterSpacing: "2.5px", fontFamily: "'Cinzel', serif" }}>
-                <div style={{ color: "#c5a059", fontSize: "18px", marginBottom: "6px", fontWeight: 700 }}>SOFTCURSE LAB</div>
-                <div style={{ opacity: 0.6, fontSize: "13px", marginBottom: "24px" }}>SOLE DEVELOPER & DESIGNER</div>
-                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>3D Models — Creality Cloud Community</div>
-                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>Textures — AmbientCG (CC0)</div>
-                <div style={{ opacity: 0.5, fontSize: "12px", letterSpacing: "1.5px" }}>Engine — Three.js + React</div>
+        <div className="sub-panel" style={{ width: "100%" }}>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                {t.CREDITS || "ABOUT & CREATORS"}
             </div>
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "30px 0" }} />
+
+            <div style={{
+                maxHeight: "50vh",
+                overflowY: "auto",
+                padding: "0 10px",
+                marginBottom: "20px",
+                textAlign: "center",
+                fontFamily: "'Cinzel', serif",
+                fontSize: "12px",
+                lineHeight: "1.6",
+                color: "rgba(197,160,89,0.8)"
+            }}>
+                <div style={{ color: "#c5a059", fontSize: "20px", marginBottom: "6px", fontWeight: 700, fontFamily: "'Cinzel Decorative', serif", textShadow: "0 0 10px rgba(197,160,89,0.4)" }}>{t.ABOUT_1}</div>
+                <div style={{ opacity: 0.9, color: "#e0c88a", fontSize: "13px", letterSpacing: "1px", marginBottom: "24px", fontStyle: "italic" }}>
+                    {t.ABOUT_2}
+                </div>
+
+                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_3 }} />
+
+                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_4}</div>
+                <div style={{ marginBottom: "20px", textAlign: "left", display: "inline-block" }}>
+                    {t.ABOUT_5}<br />
+                    <ul style={{ paddingLeft: "20px", marginTop: "10px", color: "rgba(197,160,89,0.7)" }}>
+                        <li>{t.ABOUT_6_LI1}</li>
+                        <li>{t.ABOUT_6_LI2}</li>
+                        <li>{t.ABOUT_6_LI3}</li>
+                        <li>{t.ABOUT_6_LI4}</li>
+                        <li>{t.ABOUT_6_LI5}</li>
+                        <li>{t.ABOUT_6_LI6}</li>
+                    </ul>
+                </div>
+                <div style={{ marginBottom: "20px", color: "#e0c88a", fontWeight: "bold", letterSpacing: "1px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_7 }} />
+
+                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_8}</div>
+                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_9 }} />
+
+                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_10}</div>
+                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_11 }} />
+
+                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_12}</div>
+                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_13 }} />
+
+                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "24px 0 10px", fontWeight: 700 }}>{t.ABOUT_14}</div>
+                <div style={{ marginBottom: "24px", color: "#e0c88a", fontStyle: "italic", letterSpacing: "1px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_15 }} />
+
+                <div style={{ marginTop: "30px", padding: "15px", border: "1px solid rgba(197,160,89,0.2)", background: "rgba(197,160,89,0.05)" }}>
+                    <a href="https://softcurse-website.pages.dev/" target="_blank" rel="noopener noreferrer" style={{ color: "#00ffff", textDecoration: "none", fontSize: "13px", letterSpacing: "2px", fontWeight: "bold", textShadow: "0 0 8px rgba(0,255,255,0.5)" }}>
+                        {t.ABOUT_WEB}
+                    </a>
+                </div>
+            </div>
+
+            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
             <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, justifyContent: "center", border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
-                BACK
+                {t.BACK}
             </button>
         </div>
     );
@@ -510,27 +560,28 @@ function CreditsPanel({ onBack }) {
 
 // ── How to Play panel ────────────────────────────────────────
 function HowToPlayPanel({ onBack }) {
+    const { t } = useLang();
     const tips = [
-        ["LEFT CLICK", "Select a piece"],
-        ["LEFT CLICK DOT", "Move to square"],
-        ["RIGHT DRAG", "Orbit camera"],
-        ["SCROLL", "Zoom in / out"],
-        ["UNDO", "Take back last move"],
-        ["NEW GAME", "Reset the board"],
+        [t.HT_1.split(":")[0], t.HT_1.split(":")[1]],
+        [t.HT_2.split(":")[0], t.HT_2.split(":")[1]],
+        [t.HT_3.split(":")[0], t.HT_3.split(":")[1]],
+        [t.HT_4.split(":")[0], t.HT_4.split(":")[1]],
+        [t.HT_5.split(":")[0], t.HT_5.split(":")[1]],
+        [t.HT_6.split(":")[0], t.HT_6.split(":")[1]],
     ];
     return (
         <div className="sub-panel" style={{ width: "100%" }}>
-            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>HOW TO PLAY</div>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>{t.HOW_TO_PLAY}</div>
             {tips.map(([key, val]) => (
                 <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "12px 20px", borderBottom: "1px solid rgba(197,160,89,0.1)", fontFamily: "'Cinzel', serif" }}>
                     <span style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "2.5px", fontWeight: 700 }}>{key}</span>
-                    <span style={{ color: "rgba(197,160,89,0.6)", fontSize: "13px" }}>{val}</span>
+                    <span style={{ color: "rgba(197,160,89,0.6)", fontSize: "13px", textAlign: "right", marginLeft: 10 }}>{val}</span>
                 </div>
             ))}
             <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
             <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
-                BACK
+                {t.BACK}
             </button>
         </div>
     );
@@ -538,32 +589,40 @@ function HowToPlayPanel({ onBack }) {
 
 // ── Settings panel ───────────────────────────────────────────
 function SettingsPanel({ onBack }) {
+    const { t, lang, setLang } = useLang();
+    const LANG_LABELS = ["ENGLISH", "РУССКИЙ", "ქართული"];
     return (
         <div className="sub-panel" style={{ width: "100%" }}>
-            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>SETTINGS</div>
+            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>{t.SETTINGS}</div>
 
             <div style={{ marginBottom: "20px" }}>
-                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>AUDIO</div>
+                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>{t.AUDIO}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>MASTER</span>
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>{t.MASTER}</span>
                     <input type="range" min="0" max="100" defaultValue="100" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>MUSIC</span>
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>{t.MUSIC}</span>
                     <input type="range" min="0" max="100" defaultValue="80" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>SFX</span>
+                    <span style={{ color: "rgba(197,160,89,0.8)", fontSize: "13px" }}>{t.SFX}</span>
                     <input type="range" min="0" max="100" defaultValue="100" style={{ width: "120px", accentColor: "#c5a059" }} />
                 </div>
             </div>
 
             <div style={{ marginBottom: "20px" }}>
-                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>LANGUAGE</div>
+                <div style={{ color: "#c5a059", fontSize: "13px", letterSpacing: "3px", marginBottom: "12px", fontWeight: 700 }}>{t.LANGUAGE}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {["ENGLISH", "РУССКИЙ", "ქართული"].map((l, i) => (
+                    {LANG_LABELS.map((l, i) => (
                         <label key={l} style={{ display: "flex", alignItems: "center", gap: "12px", color: "rgba(197,160,89,0.8)", fontSize: "13px", cursor: "pointer" }}>
-                            <input type="radio" name="lang" defaultChecked={i === 0} style={{ accentColor: "#c5a059", width: "16px", height: "16px" }} />
+                            <input
+                                type="radio"
+                                name="lang"
+                                checked={lang === langCodes[i]}
+                                onChange={() => setLang(langCodes[i])}
+                                style={{ accentColor: "#c5a059", width: "16px", height: "16px" }}
+                            />
                             {l}
                         </label>
                     ))}
@@ -573,7 +632,7 @@ function SettingsPanel({ onBack }) {
             <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
             <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, border: "none", background: "transparent" }}>
                 <span className="menu-icon">←</span>
-                BACK
+                {t.BACK}
             </button>
         </div>
     );
@@ -581,21 +640,22 @@ function SettingsPanel({ onBack }) {
 
 // ── Main Menu overlay ────────────────────────────────────────
 function MainMenu({ onStart, hasSave, allPhasesReady }) {
+    const { t } = useLang();
     const [panel, setPanel] = useState("main"); // "main" | "newgame" | "credits" | "howtoplay"
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
-        const t = setTimeout(() => setVisible(true), 200);
-        return () => clearTimeout(t);
+        const tObj = setTimeout(() => setVisible(true), 200);
+        return () => clearTimeout(tObj);
     }, []);
 
     const MENU_ITEMS = [
-        { label: "NEW GAME", icon: "⚔", panel: "newgame", delay: 0 },
-        { label: "CONTINUE", icon: "▶", panel: "continue", delay: 80, disabled: !hasSave },
-        { label: "HOW TO PLAY", icon: "📖", panel: "howtoplay", delay: 160 },
-        { label: "SETTINGS", icon: "⚙", panel: "settings", delay: 240 },
-        { label: "CREDITS", icon: "✦", panel: "credits", delay: 320 },
-        { label: "EXIT", icon: "⏏", panel: "exit", delay: 400 },
+        { label: t.NEW_GAME, icon: "⚔", panel: "newgame", delay: 0 },
+        { label: t.CONTINUE, icon: "▶", panel: "continue", delay: 80, disabled: !hasSave },
+        { label: t.HOW_TO_PLAY, icon: "📖", panel: "howtoplay", delay: 160 },
+        { label: t.SETTINGS, icon: "⚙", panel: "settings", delay: 240 },
+        { label: t.CREDITS, icon: "✦", panel: "credits", delay: 320 },
+        { label: t.EXIT, icon: "⏏", panel: "exit", delay: 400 },
     ];
 
     return (
@@ -726,7 +786,8 @@ export default function ChessUI({
     gameStarted, onMenuStart,
     phase1Ready, allPhasesReady, phase1Progress,
 }) {
-    const LOADING_MSGS = ["Loading world...", "Summoning armies...", "Preparing the board..."];
+    const { t } = useLang();
+    const LOADING_MSGS = [t.LOADING_1, t.LOADING_2, t.LOADING_3];
     const [loadMsgIdx, setLoadMsgIdx] = useState(0);
     const isWt = msg.includes("WHITE");
     const mc = msg.includes("WINS") ? "#c5a059"
@@ -842,7 +903,7 @@ export default function ChessUI({
                                 animation: "loadingPulse 1.5s ease-in-out infinite",
                                 cursor: "pointer",
                             }}>
-                                TAP TO CONTINUE
+                                {t.TAP_CONTINUE}
                             </div>
                         )}
                     </div>
@@ -892,11 +953,11 @@ export default function ChessUI({
                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                             zIndex: 100,
                         }}>
-                            <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>PAUSED</div>
+                            <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>{t.PAUSED}</div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
-                                <button className="menu-item" onClick={() => setPaused(false)}>▶ RESUME</button>
-                                <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ MAIN MENU</button>
-                                <button className="menu-item" onClick={() => window.close()}>⏏ EXIT TO DESKTOP</button>
+                                <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.CONTINUE}</button>
+                                <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.EXIT}</button>
+                                <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
                             </div>
                         </div>
                     )}
@@ -916,7 +977,7 @@ export default function ChessUI({
                             <div style={{ width: 2, height: 32, background: "#c5a059", boxShadow: "0 0 8px #c5a059" }} />
                             <div>
                                 <div style={{ color: "#c5a059", fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "clamp(2px, 0.8vw, 5px)", opacity: 0.75, fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Softcurse's Chess</div>
-                                <div style={{ color: "#e0f0ff", fontSize: "clamp(14px, 3vw, 20px)", letterSpacing: "clamp(1px, 0.5vw, 3px)", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Angels vs Demons</div>
+                                <div style={{ color: "#e0f0ff", fontSize: "clamp(14px, 3vw, 20px)", letterSpacing: "clamp(1px, 0.5vw, 3px)", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>{t.AVD}</div>
                             </div>
                         </div>
 
@@ -938,17 +999,17 @@ export default function ChessUI({
                             {thinking ? (
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
                                     <span style={{ display: "inline-block", width: 9, height: 9, border: "1px solid #00ff88", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .75s linear infinite" }} />
-                                    AI COMPUTING…
+                                    {t.COMPUTING || "AI COMPUTING…"}
                                 </span>
-                            ) : msg}
+                            ) : (t[msg] || msg)}
                         </div>
 
                         {/* Right — controls */}
                         <div style={{ textAlign: "right", pointerEvents: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-                            <div style={{ color: "rgba(197,160,89,.5)", fontSize: "13px", letterSpacing: "2px", fontFamily: "'Cinzel Decorative', serif" }}>MOVE {moveCount}</div>
+                            <div style={{ color: "rgba(197,160,89,.5)", fontSize: "13px", letterSpacing: "2px", fontFamily: "'Cinzel Decorative', serif" }}>{t.MOVE} {moveCount}</div>
                             <div style={{ display: "flex", gap: "5px" }}>
                                 <button className="hud-btn" onClick={() => window._battleChessUndo?.()}>↩ UNDO</button>
-                                <button className="hud-btn" style={{ borderColor: "rgba(197,160,89,.6)", color: "#c5a059" }} onClick={() => window._battleChessReset?.()}>NEW GAME</button>
+                                <button className="hud-btn" style={{ borderColor: "rgba(197,160,89,.6)", color: "#c5a059" }} onClick={() => window._battleChessReset?.()}>{t.NEW_GAME_BTN}</button>
                             </div>
                         </div>
                     </div>
@@ -961,7 +1022,7 @@ export default function ChessUI({
                         {logOpen && (
                             <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid rgba(197,160,89,.25)", borderLeft: "none", width: "min(230px, 60vw)", maxHeight: "min(400px, 50vh)", display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(197,160,89,.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ color: "rgba(197,160,89,.6)", fontSize: "12px", letterSpacing: "2.5px", fontFamily: "'Cinzel Decorative', serif" }}>MOVE LOG</span>
+                                    <span style={{ color: "rgba(197,160,89,.6)", fontSize: "12px", letterSpacing: "2.5px", fontFamily: "'Cinzel Decorative', serif" }}>{t.MOVE_LOG}</span>
                                     <span style={{ color: "rgba(197,160,89,.3)", fontSize: "11px" }}>{moveLog.length} pairs</span>
                                 </div>
                                 <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "10px 14px" }}>
@@ -991,7 +1052,7 @@ export default function ChessUI({
                     {promoModal && (
                         <div style={{ position: "absolute", inset: 0, background: "rgba(5,1,10,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
                             <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid #c5a059", padding: 30, textAlign: "center" }}>
-                                <div style={{ color: "#c5a059", fontSize: "18px", letterSpacing: "4px", marginBottom: 25, fontFamily: "'Cinzel Decorative', serif" }}>PAWN PROMOTION</div>
+                                <div style={{ color: "#c5a059", fontSize: "18px", letterSpacing: "4px", marginBottom: 25, fontFamily: "'Cinzel Decorative', serif" }}>{t.PAWN_PROMO}</div>
                                 <div style={{ display: "flex", gap: 15 }}>
                                     {PROMO_OPTS.map(o => (
                                         <button key={o.t} onClick={() => window._battleChessPromoChoice?.(o.t)} style={{ background: "rgba(197,160,89,.1)", border: "1px solid rgba(197,160,89,.3)", color: "#c5a059", padding: "15px 20px", cursor: "pointer", transition: "all .2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,.25)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,.1)"}>

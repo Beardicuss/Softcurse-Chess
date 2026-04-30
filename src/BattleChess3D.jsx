@@ -20,7 +20,7 @@ import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 export default function BattleChess3D() {
   const mountRef = useRef(null);
   const [gameStarted, setGameStarted] = useState(false);
-  const [msg, setMsg] = useState("⚔  WHITE'S TURN");
+  const [msg, setMsg] = useState("TURN_W");
   const [caps, setCaps] = useState({ w: [], b: [] });
   const [moveCount, setMoveCount] = useState(0);
   const [mode, setMode] = useState("pvp");
@@ -338,10 +338,9 @@ export default function BattleChess3D() {
     }
 
     function statusMsg(gs, lastColor) {
-      if (gs.status === "checkmate") return `💀 CHECKMATE — ${lastColor === W ? "ANGELS" : "DEMONS"} WIN`;
-      if (gs.status === "stalemate") return "⚖  STALEMATE — DRAW";
-      const turnName = gs.turn === W ? "ANGELS" : "DEMONS";
-      return gs.status === "check" ? `⚠️ ${turnName} IN CHECK` : `⚔  ${turnName}'S TURN`;
+      if (gs.status === "checkmate") return lastColor === W ? "MATE_W" : "MATE_B";
+      if (gs.status === "stalemate") return "STALEMATE";
+      return gs.status === "check" ? (gs.turn === W ? "CHECK_W" : "CHECK_B") : (gs.turn === W ? "TURN_W" : "TURN_B");
     }
 
     function doAITurn(retries = 0) {
@@ -610,7 +609,7 @@ export default function BattleChess3D() {
 
     window._battleChessReset = () => {
       aiPendingRef.current = false; animatingRef.current = false; gsRef.current = initGame(); spawnAll(gsRef.current.board); clearHL();
-      setMsg("⚔  WHITE'S TURN"); setCaps({ w: [], b: [] }); setMoveCount(0); setThinking(false); setMoveLog([]); setPromoModal(null);
+      setMsg("TURN_W"); setCaps({ w: [], b: [] }); setMoveCount(0); setThinking(false); setMoveLog([]); setPromoModal(null);
       historyRef.current = []; pendingLogRef.current = { w: null, b: null };
     };
 
