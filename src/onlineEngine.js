@@ -98,13 +98,6 @@ export function sendMove(fr, ff, tr, tf, promo = "Q") {
     ws.send(JSON.stringify({ type: "move", fr, ff, tr, tf, promo }));
 }
 
-/**
- * Send resign message.
- */
-export function resign() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: "resign" }));
-}
 
 /**
  * Send rematch message.
