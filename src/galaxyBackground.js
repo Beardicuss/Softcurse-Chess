@@ -43,7 +43,7 @@ export function createGalaxyBackground(scene) {
             }
             float fbm(vec3 p) {
                 float v = 0.0, a = 0.5;
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 3; i++) {
                     v += a * noise(p);
                     p *= 2.0;
                     a *= 0.5;
@@ -202,7 +202,7 @@ export function createGalaxyBackground(scene) {
             }
             float fbm(vec2 p) {
                 float v = 0.0, add = 0.5;
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 3; i++) {
                     v += add * noise(p);
                     p *= 2.0;
                     add *= 0.5;

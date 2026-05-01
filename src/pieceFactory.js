@@ -6,6 +6,7 @@ import { getAntiqueStoneMaterial } from "./antiqueStoneMaterial.js";  // ← was
 
 const loader = new GLTFLoader();
 const modelCache = {};
+const resolvedCache = {}; // stores resolved mesh objects for instant access
 
 const W_FILES = {
     P: "obj_003",
@@ -41,6 +42,7 @@ function loadGeometry(name) {
                     });
                     if (meshObj) {
                         meshObj.geometry.computeBoundingBox();
+                        resolvedCache[name] = meshObj; // mark as resolved
                         resolve(meshObj);
                     } else {
                         reject(new Error(`No mesh found in ${name}.glb`));
@@ -176,9 +178,11 @@ export function makePiece(type, color) {
             fallback.children.forEach((child) => g.add(child.clone()));
         });
 
-    // Placeholder while loading
-    const placeholder = makeProcedural(type, color);
-    placeholder.children.forEach((child) => g.add(child.clone()));
+    // Only create placeholder if model isn't already resolved
+    if (!resolvedCache[modelName]) {
+        const placeholder = makeProcedural(type, color);
+        placeholder.children.forEach((child) => g.add(child.clone()));
+    }
 
     g.userData = { type, color };
     return g;

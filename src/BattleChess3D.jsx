@@ -91,6 +91,7 @@ export default function BattleChess3D() {
     scene.background = new THREE.Color(THEME.bg);
     scene.fog = new THREE.FogExp2(THEME.bg, THEME.fogDensity);
     const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 500);
+    const _lastCamPos = new THREE.Vector3(); // dirty flag for updateAntiqueStoneMaterials
     const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
     renderer.setSize(EW, EH);
     renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
@@ -208,16 +209,7 @@ export default function BattleChess3D() {
     const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
     const p1Figures = preloadModels().then(() => phase1tick());
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "0") {
-        console.log("SCENE DUMP:");
-        scene.traverse(node => {
-          if (node.isMesh) {
-            console.log(`MESH: ${node.name || 'unnamed'} - Geometry: ${node.geometry.type} - Material: ${node.material.type} - Radius: ${node.geometry.boundingSphere?.radius}`);
-          }
-        });
-      }
-    });
+    // Debug scene dump removed (was leaking undisposed keydown listener)
 
     Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
       setPhase1Ready(true);
@@ -282,7 +274,7 @@ export default function BattleChess3D() {
         }
         geo.attributes.position.needsUpdate = true;
         mat.opacity = Math.max(0, 1 - life / 1.6);
-        if (life >= 1.6) { scene.remove(pts); return false; }
+        if (life >= 1.6) { scene.remove(pts); geo.dispose(); mat.dispose(); return false; }
         return true;
       };
     }
@@ -299,8 +291,11 @@ export default function BattleChess3D() {
     selLight.castShadow = false;
     scene.add(selLight);
 
+    // Pre-flatten for clearHL performance (avoid .flat() per call)
+    const flatSqMeshes = sqMeshes.flat();
+
     function clearHL() {
-      sqMeshes.flat().forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
+      flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
       DOT_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
       RING_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
       selLight.intensity = 0;
@@ -474,7 +469,7 @@ export default function BattleChess3D() {
       const castleRookToPos = wasCastle ? toWorld(fr, tf === 6 ? 5 : 3) : null;
       const castleRookToKey = wasCastle ? `${fr},${tf === 6 ? 5 : 3}` : null;
       const afterAnim = () => {
-        historyRef.current.push(JSON.parse(JSON.stringify(g)));
+        historyRef.current.push(structuredClone(g));
         delete PM[fk];
         if (isPawnPromo) {
           scene.remove(movMesh); const newM = makePiece(chosenPromo, piece.c);
@@ -578,8 +573,10 @@ export default function BattleChess3D() {
       if (e.button !== 0) return;
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; mv2.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      // Pre-cached flat array of square meshes for raycasting (avoid spread alloc per click)
+      const flatSquares = sqMeshes.flat();
       ray.setFromCamera(mv2, camera);
-      const hits = ray.intersectObjects([...sqMeshes.flat(), ...Object.values(PM)], true);
+      const hits = ray.intersectObjects(flatSquares.concat(Object.values(PM)), true);
       const sq = getSquareFromHit(hits); if (sq) handleClick(sq[0], sq[1]);
     };
 
@@ -635,8 +632,9 @@ export default function BattleChess3D() {
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
       mv2.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+      const flatSquaresT = sqMeshes.flat();
       ray.setFromCamera(mv2, camera);
-      const hits = ray.intersectObjects([...sqMeshes.flat(), ...Object.values(PM)], true);
+      const hits = ray.intersectObjects(flatSquaresT.concat(Object.values(PM)), true);
       const sq = getSquareFromHit(hits); if (sq) handleClick(sq[0], sq[1]);
     };
     renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: false });
@@ -789,7 +787,11 @@ export default function BattleChess3D() {
       }
       particles.length = writeIdx;
 
-      updateAntiqueStoneMaterials(camera);
+      // Dirty flag: only update antique stone uniforms when camera actually moves
+      if (!camera.position.equals(_lastCamPos)) {
+        updateAntiqueStoneMaterials(camera);
+        _lastCamPos.copy(camera.position);
+      }
       renderer.render(scene, camera);
     };
     animate(0);
