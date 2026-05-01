@@ -782,7 +782,8 @@ export default function ChessUI({
     moveLog, logOpen, logRef,
     setModeFixed, setDiffFixed, setLogOpen,
     gameStarted, onMenuStart,
-    phase1Ready, allPhasesReady, phase1Progress
+    phase1Ready, allPhasesReady, phase1Progress,
+    eloStats, onlineRematchState, onlineRematchTime
 }) {
     const { t } = useLang();
 
@@ -796,6 +797,8 @@ export default function ChessUI({
                 : isWt ? "#efe6a0" : "#ff7777";
 
     const hasSave = !!localStorage.getItem("battleChessSave");
+    const isGameOver = msg === "MATE_W" || msg === "MATE_B" || msg === "STALEMATE";
+    const isMobile = typeof window !== 'undefined' && (/Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 768);
     const [paused, setPaused] = useState(false);
     const [pausePanel, setPausePanel] = useState("main");
 
@@ -964,6 +967,9 @@ export default function ChessUI({
                                     <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>{t.PAUSED}</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
                                         <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.RESUME}</button>
+                                        {mode !== "online" && (
+                                            <button className="menu-item" onClick={() => { window._battleChessReset?.(); setPaused(false); }}>⟳ RESTART</button>
+                                        )}
                                         <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
                                         <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
                                         <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
@@ -975,8 +981,8 @@ export default function ChessUI({
                         </div>
                     )}
 
-                    {/* ☰ Hamburger MENU + Fullscreen buttons (visible when not paused) */}
-                    {!paused && (
+                    {/* ☰ Hamburger MENU (visible when not paused, mobile only) */}
+                    {!paused && isMobile && (
                         <div style={{
                             position: "absolute", top: "clamp(6px, 1.5vw, 12px)", left: "clamp(6px, 1.5vw, 12px)",
                             display: "flex", gap: "8px", zIndex: 90, pointerEvents: "auto",
@@ -990,6 +996,43 @@ export default function ChessUI({
                                     backdropFilter: "blur(4px)", borderRadius: "4px",
                                 }}
                             >☰</button>
+                        </div>
+                    )}
+
+                    {/* Top Right Buttons (Lock + Fullscreen) */}
+                    {!paused && (
+                        <div style={{
+                            position: "absolute", top: "clamp(6px, 1.5vw, 12px)", right: "clamp(6px, 1.5vw, 12px)",
+                            display: "flex", gap: "8px", zIndex: 90, pointerEvents: "auto",
+                        }}>
+                            {/* Lock Button (Mobile Only) */}
+                            {('ontouchstart' in window || navigator.maxTouchPoints > 0) && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            if (screen.orientation?.type?.startsWith('landscape')) {
+                                                screen.orientation.unlock();
+                                            } else {
+                                                const d = document.documentElement;
+                                                if (!document.fullscreenElement) {
+                                                    await (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
+                                                }
+                                                await screen.orientation?.lock?.('landscape');
+                                            }
+                                        } catch (e) {
+                                            console.warn("Orientation API error:", e);
+                                        }
+                                    }}
+                                    style={{
+                                        background: "rgba(5,1,10,0.7)", border: "1px solid rgba(197,160,89,0.3)",
+                                        color: "#c5a059", fontSize: "16px", padding: "6px 12px",
+                                        cursor: "pointer", fontFamily: "'Cinzel', serif",
+                                        backdropFilter: "blur(4px)", borderRadius: "4px", display: "flex", alignItems: "center"
+                                    }}
+                                >⤢ LOCK</button>
+                            )}
+
+                            {/* Fullscreen Button */}
                             <button
                                 onClick={() => {
                                     const d = document.documentElement;
@@ -1012,17 +1055,16 @@ export default function ChessUI({
                     {/* Top bar */}
                     <div style={{
                         position: "absolute", top: 0, left: 0, right: 0,
-                        padding: "clamp(8px, 2vw, 14px) clamp(10px, 2vw, 20px)",
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        flexWrap: "wrap", gap: "8px",
+                        padding: "clamp(8px, 2vw, 14px)",
                         pointerEvents: "none",
+                        display: "flex", justifyContent: "center", alignItems: "center",
                         background: "linear-gradient(180deg,rgba(5,1,10,.93) 0%,transparent 100%)",
                         animation: "hudSlideDown 0.5s ease forwards",
                     }}>
                         {/* Left — title */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <div style={{ width: 2, height: 32, background: "#c5a059", boxShadow: "0 0 8px #c5a059" }} />
-                            <div>
+                        <div style={{ position: "absolute", left: "clamp(10px, 2vw, 20px)", display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div style={{ width: 2, height: 32, background: "#c5a059", boxShadow: "0 0 8px #c5a059", display: window.innerWidth <= 768 ? "none" : "block" }} />
+                            <div style={{ display: window.innerWidth <= 768 ? "none" : "block" }}>
                                 <div style={{ color: "#c5a059", fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "clamp(2px, 0.8vw, 5px)", opacity: 0.75, fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Softcurse's Chess</div>
                                 <div style={{ color: "#e0f0ff", fontSize: "clamp(14px, 3vw, 20px)", letterSpacing: "clamp(1px, 0.5vw, 3px)", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>{t.AVD}</div>
                             </div>
@@ -1040,8 +1082,6 @@ export default function ChessUI({
                             textAlign: "center",
                             transition: "all .3s",
                             fontFamily: "'Cinzel', serif",
-                            order: window.innerWidth <= 768 ? 3 : 0,
-                            flex: window.innerWidth <= 768 ? "1 1 100%" : "0 0 auto",
                         }}>
                             {thinking ? (
                                 <span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
@@ -1051,14 +1091,7 @@ export default function ChessUI({
                             ) : (t[msg] || msg)}
                         </div>
 
-                        {/* Right — controls */}
-                        <div style={{ textAlign: "right", pointerEvents: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-                            <div style={{ color: "rgba(197,160,89,.5)", fontSize: "13px", letterSpacing: "2px", fontFamily: "'Cinzel Decorative', serif" }}>{t.MOVE} {moveCount}</div>
-                            <div style={{ display: "flex", gap: "5px" }}>
-                                <button className="hud-btn" onClick={() => window._battleChessUndo?.()}>↩ UNDO</button>
-                                <button className="hud-btn" style={{ borderColor: "rgba(197,160,89,.6)", color: "#c5a059" }} onClick={() => window._battleChessReset?.()}>{t.NEW_GAME_BTN}</button>
-                            </div>
-                        </div>
+                        {/* Right HUD controls have been removed from the top bar per request */}
                     </div>
 
                     {/* Move Log Panel */}
@@ -1086,7 +1119,7 @@ export default function ChessUI({
                     </div>
 
                     {/* Captured pieces */}
-                    <div style={{ position: "absolute", bottom: "clamp(10px, 2vw, 20px)", left: "clamp(10px, 2vw, 20px)", display: "flex", flexDirection: "column", gap: 10, animation: "hudSlideUp 0.5s ease forwards" }}>
+                    <div style={{ position: "absolute", bottom: "clamp(10px, 2vw, 20px)", left: "clamp(10px, 2vw, 20px)", display: "flex", flexDirection: "column", gap: 10, animation: "hudSlideUp 0.5s ease forwards", pointerEvents: "none" }}>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", maxWidth: "min(200px, 40vw)" }}>
                             {caps.w.map((t, i) => <span key={i} style={{ color: "#c5a059", fontSize: "clamp(14px, 3vw, 20px)", textShadow: "0 0 8px rgba(197,160,89,.4)" }}>{SYM_W[t]}</span>)}
                         </div>
@@ -1094,6 +1127,36 @@ export default function ChessUI({
                             {caps.b.map((t, i) => <span key={i} style={{ color: "#7a3232", fontSize: "clamp(14px, 3vw, 20px)", textShadow: "0 0 8px rgba(122,50,50,.4)" }}>{SYM_B[t]}</span>)}
                         </div>
                     </div>
+
+                    {/* Bottom Right HUD (Moves, Elo, Rematch) */}
+                    {!paused && (
+                        <div style={{
+                            position: "absolute", bottom: "clamp(10px, 2vw, 20px)", right: "clamp(10px, 2vw, 20px)",
+                            display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px",
+                            zIndex: 90, pointerEvents: "auto", animation: "hudSlideUp 0.5s ease forwards"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(5,1,10,0.7)", padding: "4px 8px", borderRadius: "4px", border: "1px solid rgba(197,160,89,0.3)" }}>
+                                <div style={{ color: "rgba(197,160,89,.8)", fontSize: "13px", letterSpacing: "2px", fontFamily: "'Cinzel Decorative', serif" }}>{t.MOVE} {moveCount}</div>
+                                {mode === "ai" && eloStats && (
+                                    <div style={{
+                                        color: "#c5a059", fontSize: "12px", letterSpacing: "1px",
+                                        fontFamily: "'Cinzel', serif", padding: "2px 8px",
+                                        border: "1px solid rgba(197,160,89,0.3)",
+                                        background: "rgba(197,160,89,0.08)",
+                                    }}>⚔ {eloStats.elo}</div>
+                                )}
+                            </div>
+                            {isGameOver && (
+                                <button className="hud-btn" style={{ borderColor: "rgba(100,200,100,.6)", color: "#66cc66" }} onClick={() => window._battleChessRematch?.()}>
+                                    {mode === "online"
+                                        ? (onlineRematchState === "requested_by_me" ? `WAITING... (${onlineRematchTime}s)`
+                                            : onlineRematchState === "requested_by_op" ? `ACCEPT REMATCH (${onlineRematchTime}s)`
+                                                : `⟳ REMATCH (${onlineRematchTime}s)`)
+                                        : "⟳ REMATCH"}
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Promotion modal */}
                     {promoModal && (
@@ -1112,7 +1175,8 @@ export default function ChessUI({
                         </div>
                     )}
                 </>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

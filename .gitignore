@@ -43,6 +43,9 @@ pnpm-debug.log*
 .eslintcache
 .parcel-cache/
 .cache/
+.vite/
+coverage/
+.swc/
 
 # Agent / AI metadata
 .antigravity/
@@ -50,3 +53,10 @@ pnpm-debug.log*
 
 # Temporary patch scripts
 patch_board.cjs
+test-output.txt
+*.tmp
+*.bak
+*.pid
+
+# Workflows
+workflow/

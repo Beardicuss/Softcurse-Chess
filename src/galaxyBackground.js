@@ -88,7 +88,7 @@ export function createGalaxyBackground(scene) {
         depthWrite: false,
         side: THREE.BackSide,
     });
-    const nebSphere = new THREE.Mesh(new THREE.SphereGeometry(250, 48, 48), nebMat);
+    const nebSphere = new THREE.Mesh(new THREE.SphereGeometry(250, 32, 24), nebMat);
     group.add(nebSphere);
 
     // ── 2. Stars — layered: dim field + bright twinklers ─────────

@@ -13,6 +13,7 @@ import ChessUI from "./ChessUI.jsx";
 import { createGalaxyBackground } from "./galaxyBackground.js";
 import * as OnlineEngine from "./onlineEngine.js";
 import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
+import { getElo, updateElo } from './eloSystem.js';
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -30,7 +31,11 @@ export default function BattleChess3D() {
   const [promoModal, setPromoModal] = useState(null);
   const [moveLog, setMoveLog] = useState([]);
   const [logOpen, setLogOpen] = useState(false);
+  const [eloStats, setEloStats] = useState(getElo());
+  const [onlineRematchState, setOnlineRematchState] = useState("none");
+  const [onlineRematchTime, setOnlineRematchTime] = useState(0);
   const logRef = useRef(null);
+  const onlineRematchInterval = useRef(null);
 
   // ── Phased loading state ────────────────────────────────────
   const [phase1Ready, setPhase1Ready] = useState(false);
@@ -100,6 +105,15 @@ export default function BattleChess3D() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.5;
     el.appendChild(renderer.domElement);
+
+    // ── WebGL context loss recovery ────────────────────────────
+    renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      destroyed = true;
+    }, false);
+    renderer.domElement.addEventListener('webglcontextrestored', () => {
+      window.location.reload();
+    }, false);
 
     // ── Galaxy (PC only) ─────────────────────────────────────────
     const galaxy = isMobile ? null : createGalaxyBackground(scene);
@@ -234,7 +248,10 @@ export default function BattleChess3D() {
 
     const PM = {};
     function spawnAll(board) {
-      Object.values(PM).forEach(m => scene.remove(m));
+      Object.values(PM).forEach(m => {
+        scene.remove(m);
+        m.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); } });
+      });
       for (const k in PM) delete PM[k];
       for (let r = 0; r < 8; r++)
         for (let f = 0; f < 8; f++) {
@@ -287,9 +304,17 @@ export default function BattleChess3D() {
       const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.44, 24), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
       m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m;
     });
-    const selLight = new THREE.PointLight(0xffffff, 0, 2.5);
-    selLight.castShadow = false;
-    scene.add(selLight);
+    // Glowing selection disc (replaces invisible PointLight)
+    const selGlowMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0,
+      side: THREE.DoubleSide, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const selGlow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 32), selGlowMat);
+    selGlow.rotation.x = -Math.PI / 2;
+    selGlow.position.y = 0.025;
+    selGlow.visible = false;
+    scene.add(selGlow);
 
     // Pre-flatten for clearHL performance (avoid .flat() per call)
     const flatSqMeshes = sqMeshes.flat();
@@ -298,7 +323,7 @@ export default function BattleChess3D() {
       flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
       DOT_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
       RING_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
-      selLight.intensity = 0;
+      selGlow.visible = false; selGlowMat.opacity = 0;
     }
     function showHL(sel, moves, last, checkC, board) {
       clearHL();
@@ -313,11 +338,12 @@ export default function BattleChess3D() {
         m.userData.mat.color.setHex(cHex);
         m.userData.mat.opacity = 0.45;
 
-        // Activate glowing colored physical light underneath the piece
-        selLight.color.setHex(cHex);
-        selLight.intensity = 6.0;
+        // Activate visible glowing disc underneath the piece
+        selGlowMat.color.setHex(cHex);
+        selGlowMat.opacity = 0.7;
         const sPos = toWorld(r, f);
-        selLight.position.set(sPos.x, 0.4, sPos.z);
+        selGlow.position.set(sPos.x, 0.025, sPos.z);
+        selGlow.visible = true;
       }
       moves.forEach(([tr, tf], i) => {
         const isCap = board[tr][tf] !== null;
@@ -502,7 +528,32 @@ export default function BattleChess3D() {
         if (modeRef.current === "online" && onlineRef.current && piece.c === playerSideRef.current) {
           OnlineEngine.sendMove(fr, ff, tr, tf, isPawnPromo ? chosenPromo : "Q");
         }
+
+        // Online 15-second mutual rematch timeout
+        if (modeRef.current === "online" && (ngs.status === "checkmate" || ngs.status === "stalemate")) {
+          setOnlineRematchTime(15);
+          if (onlineRematchInterval.current) clearInterval(onlineRematchInterval.current);
+          onlineRematchInterval.current = setInterval(() => {
+            setOnlineRematchTime(t => {
+              if (t <= 1) {
+                clearInterval(onlineRematchInterval.current);
+                window._battleChessExitToMenu?.();
+                return 0;
+              }
+              return t - 1;
+            });
+          }, 1000);
+        }
+
         console.log("[finish] mode:", modeRef.current, "turn:", ngs.turn, "playerSide:", playerSideRef.current, "status:", ngs.status, "aiPending:", aiPendingRef.current, "animating:", animatingRef.current);
+        // ELO update on game end (AI mode only)
+        if (modeRef.current === "ai" && (ngs.status === "checkmate" || ngs.status === "stalemate")) {
+          let result;
+          if (ngs.status === "stalemate") result = 'draw';
+          else result = ngs.turn === playerSideRef.current ? 'loss' : 'win'; // checkmate: loser's turn
+          updateElo(result, diffRef.current);
+          setEloStats(getElo());
+        }
         if (modeRef.current === "ai" && ngs.turn !== playerSideRef.current && (ngs.status === "playing" || ngs.status === "check")) doAITurn();
       };
       if (wasEP) {
@@ -642,6 +693,8 @@ export default function BattleChess3D() {
     renderer.domElement.addEventListener("touchend", onTouchEnd);
 
     window._battleChessReset = () => {
+      if (onlineRematchInterval.current) { clearInterval(onlineRematchInterval.current); onlineRematchInterval.current = null; }
+      setOnlineRematchState("none"); setOnlineRematchTime(0);
       aiPendingRef.current = false; animatingRef.current = false; gsRef.current = initGame(); spawnAll(gsRef.current.board); clearHL();
       setMsg("TURN_W"); setCaps({ w: [], b: [] }); setMoveCount(0); setThinking(false); setMoveLog([]); setPromoModal(null);
       historyRef.current = []; pendingLogRef.current = { w: null, b: null };
@@ -704,6 +757,16 @@ export default function BattleChess3D() {
           OnlineEngine.on("opponentLeft", () => {
             setMsg("⚔ OPPONENT DISCONNECTED");
           });
+          OnlineEngine.on("rematch", () => {
+            setOnlineRematchState(prev => {
+              if (prev === "requested_by_me") {
+                const cfg = { mode: modeRef.current, diff: diffRef.current, side: playerSideRef.current === W ? 'w' : 'b' };
+                setTimeout(() => window._battleChessMenuStart?.(cfg), 10);
+                return "none";
+              }
+              return "requested_by_op";
+            });
+          });
         }
       } else {
         const saved = localStorage.getItem("battleChessSave");
@@ -720,9 +783,37 @@ export default function BattleChess3D() {
       }
       gameStartedRef.current = true; setGameStarted(true);
       camState.current.targetDist = 11.5;
+      // Orientation lock (landscape) — mobile only, silently fails on unsupported platforms
+      try { screen.orientation?.lock?.('landscape').catch(() => { }); } catch (e) { }
     };
 
-    window._battleChessExitToMenu = () => { gameStartedRef.current = false; setGameStarted(false); };
+    window._battleChessRematch = () => {
+      setOnlineRematchState(currState => {
+        if (modeRef.current === "online") {
+          if (currState === "requested_by_op") {
+            const cfg = { mode: modeRef.current, diff: diffRef.current, side: playerSideRef.current === W ? 'w' : 'b' };
+            setTimeout(() => window._battleChessMenuStart?.(cfg), 10);
+            return "none";
+          } else {
+            OnlineEngine.sendRematch();
+            return "requested_by_me";
+          }
+        }
+        return currState;
+      });
+      if (modeRef.current !== "online") {
+        const cfg = { mode: modeRef.current, diff: diffRef.current, side: playerSideRef.current === W ? 'w' : 'b' };
+        window._battleChessMenuStart?.(cfg);
+      }
+    };
+
+    window._battleChessExitToMenu = () => {
+      if (onlineRematchInterval.current) { clearInterval(onlineRematchInterval.current); onlineRematchInterval.current = null; }
+      setOnlineRematchState("none"); setOnlineRematchTime(0);
+      gameStartedRef.current = false; setGameStarted(false);
+      try { screen.orientation?.unlock?.(); } catch (e) { }
+      if (modeRef.current === "online") OnlineEngine.disconnect();
+    };
     window._battleChessUndo = () => {
       if (animatingRef.current || historyRef.current.length === 0) return;
 
@@ -780,6 +871,14 @@ export default function BattleChess3D() {
 
       if (galaxy && galaxy.tick) galaxy.tick(time);
 
+      // Pulsing glow disc under selected piece
+      if (selGlow.visible) {
+        const pulse = 0.5 + Math.sin(time * 0.005) * 0.3; // 0.2 → 0.8
+        selGlowMat.opacity = pulse;
+        const s = 1.0 + Math.sin(time * 0.004) * 0.12;   // subtle scale breathe
+        selGlow.scale.set(s, s, 1);
+      }
+
       // In-place compaction: zero allocations, no splice GC pressure
       let writeIdx = 0;
       for (let i = 0; i < particles.length; i++) {
@@ -813,6 +912,7 @@ export default function BattleChess3D() {
         moveLog={moveLog} logOpen={logOpen} logRef={logRef} setModeFixed={setModeFixed} setDiffFixed={setDiffFixed} setLogOpen={setLogOpen}
         gameStarted={gameStarted} onMenuStart={handleMenuStart}
         phase1Ready={phase1Ready} allPhasesReady={allPhasesReady} phase1Progress={phase1Progress}
+        eloStats={eloStats} onlineRematchState={onlineRematchState} onlineRematchTime={onlineRematchTime}
       />
     </div>
   );

@@ -15,6 +15,7 @@ let callbacks = {
     onError: null,      // (msg) => {}
     onMoveOk: null,     // () => {}
     onResign: null,     // (side) => {}
+    onRematch: null,    // () => {}
 };
 
 function connectWS(roomId) {
@@ -49,6 +50,9 @@ function connectWS(roomId) {
                         break;
                     case "resign":
                         callbacks.onResign?.(msg.side);
+                        break;
+                    case "rematch":
+                        callbacks.onRematch?.();
                         break;
                     case "error":
                         callbacks.onError?.(msg.msg);
@@ -100,6 +104,14 @@ export function sendMove(fr, ff, tr, tf, promo = "Q") {
 export function resign() {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: "resign" }));
+}
+
+/**
+ * Send rematch message.
+ */
+export function sendRematch() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: "rematch" }));
 }
 
 /**
