@@ -134,6 +134,8 @@ const STYLES = `
 
   .sub-panel {
     animation: menuFadeIn 0.3s ease forwards;
+    max-height: 80dvh;
+    overflow-y: auto;
   }
 
   .diff-btn {
@@ -970,6 +972,40 @@ export default function ChessUI({
                             ) : (
                                 <SettingsPanel onBack={() => setPausePanel("main")} />
                             )}
+                        </div>
+                    )}
+
+                    {/* ☰ Hamburger MENU + Fullscreen buttons (visible when not paused) */}
+                    {!paused && (
+                        <div style={{
+                            position: "absolute", top: "clamp(6px, 1.5vw, 12px)", left: "clamp(6px, 1.5vw, 12px)",
+                            display: "flex", gap: "8px", zIndex: 90, pointerEvents: "auto",
+                        }}>
+                            <button
+                                onClick={() => setPaused(true)}
+                                style={{
+                                    background: "rgba(5,1,10,0.7)", border: "1px solid rgba(197,160,89,0.3)",
+                                    color: "#c5a059", fontSize: "20px", padding: "6px 10px",
+                                    cursor: "pointer", fontFamily: "'Cinzel', serif",
+                                    backdropFilter: "blur(4px)", borderRadius: "4px",
+                                }}
+                            >☰</button>
+                            <button
+                                onClick={() => {
+                                    const d = document.documentElement;
+                                    if (!document.fullscreenElement) {
+                                        (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
+                                    } else {
+                                        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+                                    }
+                                }}
+                                style={{
+                                    background: "rgba(5,1,10,0.7)", border: "1px solid rgba(197,160,89,0.3)",
+                                    color: "#c5a059", fontSize: "18px", padding: "6px 10px",
+                                    cursor: "pointer", fontFamily: "'Cinzel', serif",
+                                    backdropFilter: "blur(4px)", borderRadius: "4px",
+                                }}
+                            >⛶</button>
                         </div>
                     )}
 

@@ -106,7 +106,7 @@ export default function BattleChess3D() {
     // ── Lights ───────────────────────────────────────────────────
     if (isMobile) {
       // Mobile: ambient + 1 directional top-down, no shadows
-      scene.add(new THREE.AmbientLight(0xffffff, 2.5));
+      scene.add(new THREE.AmbientLight(0xffffff, 1.8));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
       dirLight.position.set(0, 10, 0);
       dirLight.castShadow = false;
@@ -754,8 +754,18 @@ export default function BattleChess3D() {
       if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
     };
 
+    // Mobile: cap at 30fps to save GPU/battery
+    const mobileFrameDuration = 1000 / 30;
+    let lastFrameTime = 0;
+
     const animate = (time) => {
       if (destroyed) return; requestAnimationFrame(animate);
+
+      // 30fps throttle on mobile
+      if (isMobile) {
+        if (time - lastFrameTime < mobileFrameDuration) return;
+        lastFrameTime = time;
+      }
 
       // Slow orbit in menu only — full cycle 120 seconds
       if (!gameStartedRef.current) {
@@ -771,15 +781,23 @@ export default function BattleChess3D() {
       updateCam();
 
       if (galaxy && galaxy.tick) galaxy.tick(time);
-      for (let i = particles.length - 1; i >= 0; i--) if (!particles[i]()) particles.splice(i, 1);
+
+      // In-place compaction: zero allocations, no splice GC pressure
+      let writeIdx = 0;
+      for (let i = 0; i < particles.length; i++) {
+        if (particles[i]()) particles[writeIdx++] = particles[i];
+      }
+      particles.length = writeIdx;
 
       updateAntiqueStoneMaterials(camera);
       renderer.render(scene, camera);
     };
     animate(0);
 
-    const onResize = () => { EW = el.clientWidth; EH = el.clientHeight; camera.aspect = EW / EH; camera.updateProjectionMatrix(); renderer.setSize(EW, EH); };
+    const onResize = () => { EW = el.clientWidth; EH = el.clientHeight; camera.aspect = EW / EH; camera.fov = camera.aspect < 1 ? 65 : 50; camera.updateProjectionMatrix(); renderer.setSize(EW, EH); };
     window.addEventListener("resize", onResize);
+    // Trigger initial FOV calc for portrait phones
+    onResize();
     return () => {
       destroyed = true; window.removeEventListener("resize", onResize); window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp);
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
