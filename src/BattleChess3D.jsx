@@ -137,20 +137,20 @@ export default function BattleChess3D() {
       topRight.castShadow = false;
       scene.add(topRight);
 
-      // Light 3: left wall → board (cool blue tint)
-      const leftWall = new THREE.DirectionalLight(0xd0deff, 1.0);
+      // Light 3: left wall → board (neutral tint now)
+      const leftWall = new THREE.DirectionalLight(0xffffff, 1.0);
       leftWall.position.set(-12, 5, 0);
       leftWall.castShadow = false;
       scene.add(leftWall);
 
-      // Light 4: right wall → board (warm tint)
-      const rightWall = new THREE.DirectionalLight(0xffeedd, 1.0);
+      // Light 4: right wall → board (neutral tint now)
+      const rightWall = new THREE.DirectionalLight(0xffffff, 1.0);
       rightWall.position.set(12, 5, 0);
       rightWall.castShadow = false;
       scene.add(rightWall);
 
-      // Light 5: black piece fill — low front light to reveal dark figure details
-      const blackFill = new THREE.DirectionalLight(0xaaccff, 3.5);
+      // Light 5: black piece fill — low front light to reveal dark figure details (neutral tint)
+      const blackFill = new THREE.DirectionalLight(0xffffff, 3.5);
       blackFill.position.set(0, 3, 14); // from black side, low angle
       blackFill.castShadow = false;
       scene.add(blackFill);
@@ -161,7 +161,7 @@ export default function BattleChess3D() {
     scene.add(boardGrp);
     const gltfLoader = new GLTFLoader();
 
-    function addBoardModel(gltf) {
+    function addBoardModel(gltf, preserveMaterials = false) {
       const model = gltf.scene;
       model.position.set(0, -0.25, 0);
       model.scale.setScalar(0.45);
@@ -182,11 +182,13 @@ export default function BattleChess3D() {
               m.envMap = null;
               m.envMapIntensity = 0;
               // Do NOT override color — preserve original texture
-              m.roughness = 0.85;   // matte, not shiny
-              m.metalness = 0.0;
-              if (m.specular) m.specular.setHex(0x111111); // kill specular
-              if (m.shininess !== undefined) m.shininess = 0;
-              if (m.emissive) { m.emissive.setHex(0x000000); m.emissiveIntensity = 0; }
+              if (!preserveMaterials) {
+                m.roughness = 0.85;   // matte, not shiny
+                m.metalness = 0.0;
+                if (m.specular) m.specular.setHex(0x111111); // kill specular
+                if (m.shininess !== undefined) m.shininess = 0;
+                if (m.emissive) { m.emissive.setHex(0x000000); m.emissiveIntensity = 0; }
+              }
               m.needsUpdate = true;
             });
           }
@@ -195,15 +197,15 @@ export default function BattleChess3D() {
       boardGrp.add(model);
     }
 
-    // Phase 1: board + ground + figures + walls + decoration
-    const phase1Total = 5; // board, ground, walls, figures, decoration
+    // Phase 1: board + ground + figures + walls
+    const phase1Total = 4; // board, ground, walls, figures
     let phase1Loaded = 0;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const p1Board = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/board.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
-    const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
-    const p1Deco = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/decoration.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    // Let walls.glb KEEP its authored metallic/roughness values from the generated textures
+    const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
     const p1Figures = preloadModels().then(() => phase1tick());
 
     window.addEventListener("keydown", (e) => {
@@ -217,7 +219,7 @@ export default function BattleChess3D() {
       }
     });
 
-    Promise.all([p1Board, p1Ground, p1Walls, p1Deco, p1Figures]).then(() => {
+    Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
       setPhase1Ready(true);
       setAllPhasesReady(true);
     });
@@ -293,16 +295,34 @@ export default function BattleChess3D() {
       const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.44, 24), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
       m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m;
     });
+    const selLight = new THREE.PointLight(0xffffff, 0, 2.5);
+    selLight.castShadow = false;
+    scene.add(selLight);
+
     function clearHL() {
       sqMeshes.flat().forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
       DOT_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
       RING_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
+      selLight.intensity = 0;
     }
     function showHL(sel, moves, last, checkC, board) {
       clearHL();
+      let cHex = THEME.brass; // fallback
       if (sel) {
         const [r, f] = sel;
-        const m = sqMeshes[r][f]; m.userData.mat.visible = true; m.userData.mat.color.setHex(0xc5a059); m.userData.mat.opacity = 0.25;
+        const pc = board[r][f];
+        if (pc) cHex = pc.c === 'w' ? THEME.whiteAccent : THEME.blackAccent;
+
+        const m = sqMeshes[r][f];
+        m.userData.mat.visible = true;
+        m.userData.mat.color.setHex(cHex);
+        m.userData.mat.opacity = 0.45;
+
+        // Activate glowing colored physical light underneath the piece
+        selLight.color.setHex(cHex);
+        selLight.intensity = 6.0;
+        const sPos = toWorld(r, f);
+        selLight.position.set(sPos.x, 0.4, sPos.z);
       }
       moves.forEach(([tr, tf], i) => {
         const isCap = board[tr][tf] !== null;
@@ -310,6 +330,7 @@ export default function BattleChess3D() {
         const m = pool[i]; if (!m) return;
         const pos = toWorld(tr, tf);
         m.position.set(pos.x, 0.08, pos.z);
+        m.material.color.setHex(cHex);
         m.visible = true; m.material.opacity = 0.8;
       });
       if (last) {

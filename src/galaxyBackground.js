@@ -54,23 +54,33 @@ export function createGalaxyBackground(scene) {
             void main(){
                 vec3 n = normalize(vPos);
 
-                // Silver-white nebula wisps using 3D noise (seamless)
-                float neb1 = fbm(n * 4.5 + vec3(0.3, 0.1, 0.0)) * fbm(n * 3.8 + vec3(1.1, 0.4, 0.5));
-                vec3 deepSilver = vec3(0.18, 0.20, 0.22) * neb1 * 2.5;
-
-                // Subtle ash dust
-                float neb2 = fbm(n * 5.5 + vec3(-0.8, 0.3, 0.9)) * fbm(n * 2.2 + vec3(-1.3, -0.2, 0.2));
-                vec3 ashDust = vec3(0.12, 0.13, 0.15) * neb2 * 1.2;
-
-                // Very faint grey lane
-                float neb3 = fbm(n * 2.6 + vec3(2.1, -0.5 + uTime * 0.003, 1.4));
-                vec3 paleGrey = vec3(0.08, 0.08, 0.09) * neb3 * 0.5;
+                // Add procedural Milky Way equator band with slight slant
+                vec3 slant = normalize(vec3(0.3, 1.0, 0.1));
+                float equator = dot(n, slant);
+                // Dense glowing band at the center, tapering off
+                float band = smoothstep(0.3, 0.0, abs(equator)); 
+                
+                // Add extreme procedural dust density inside the band
+                float dustNoise = fbm(n * 12.0 + vec3(uTime*0.001));
+                float structuralNoise = fbm(n * 4.0 - vec3(uTime*0.0005));
+                float mw = band * ((dustNoise * 1.5) + (structuralNoise * 0.5));
+                
+                // Colors: deep dark gold/brown at the core, icy blue at the edges
+                vec3 coreColor = vec3(1.0, 0.6, 0.3) * mw * smoothstep(0.08, 0.0, abs(equator)) * 0.8;
+                vec3 edgeColor = vec3(0.5, 0.6, 0.9) * band * dustNoise * 0.5;
+                
+                // Dark light-absorbing dust lanes overlapping the center
+                float darkLanes = smoothstep(0.35, 0.65, fbm(n * 15.0 + vec3(0.5, 0.2, 0.0)));
+                vec3 col = (coreColor + edgeColor) * (1.0 - darkLanes*0.8);
+                
+                // Subtle ambient ash dust outside the band
+                float neb2 = fbm(n * 5.5 + vec3(-0.8, 0.3, 0.9));
+                vec3 ashDust = vec3(0.08, 0.09, 0.10) * neb2 * (1.0 - band);
 
                 // Solid space backdrop (pure pitch black, extreme contrast)
-                vec3 baseSpace = vec3(0.0, 0.0, 0.005);
+                vec3 baseSpace = vec3(0.00, 0.00, 0.002);
 
-                vec3 col = baseSpace + deepSilver + ashDust + paleGrey;
-                gl_FragColor = vec4(col, 1.0);
+                gl_FragColor = vec4(baseSpace + col + ashDust, 1.0);
             }
         `,
         transparent: false,
@@ -160,249 +170,93 @@ export function createGalaxyBackground(scene) {
     const stars = new THREE.Points(sGeo, sMat);
     group.add(stars);
 
-    // ── 3. Distant Dark Celestial Bodies ──────────────────────────
-    const moons = [];
-    const planetGeo = new THREE.SphereGeometry(1, 64, 64);
-
-    // Abstract procedural dark planets (magma, dark gas giant, or eclipse silhouette)
-    const planetMat = new THREE.ShaderMaterial({
-        uniforms: {
-            uTime: { value: 0 },
-            uSeed: { value: 0 },
-            uType: { value: 0 },
-        },
+    // ── 3. Colossal Spiral Galaxy Underneath ──────────────────────────
+    const spiralGeo = new THREE.PlaneGeometry(600, 600, 1, 1);
+    const spiralMat = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 } },
         vertexShader: `
             varying vec2 vUv;
-            varying vec3 vNormal;
-            varying vec3 vViewPosition;
             void main() {
                 vUv = uv;
-                vNormal = normalize(normalMatrix * normal);
-                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                vViewPosition = -mvPosition.xyz;
-                gl_Position = projectionMatrix * mvPosition;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
         `,
         fragmentShader: `
             uniform float uTime;
-            uniform float uSeed;
-            uniform float uType;
-            
             varying vec2 vUv;
-            varying vec3 vNormal;
-            varying vec3 vViewPosition;
-
-            float hash(vec3 p) {
-                p = fract(p * 0.3183099 + 0.1);
-                p *= 17.0;
-                return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+            
+            float hash(vec2 p) {
+                p = fract(p * vec2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return fract(p.x * p.y);
             }
-            float noise(vec3 x) {
-                vec3 i = floor(x);
-                vec3 f = fract(x);
+            float noise(vec2 x) {
+                vec2 i = floor(x);
+                vec2 f = fract(x);
                 f = f * f * (3.0 - 2.0 * f);
-                return mix(
-                    mix(mix(hash(i + vec3(0.0,0.0,0.0)), hash(i + vec3(1.0,0.0,0.0)), f.x),
-                        mix(hash(i + vec3(0.0,1.0,0.0)), hash(i + vec3(1.0,1.0,0.0)), f.x), f.y),
-                    mix(mix(hash(i + vec3(0.0,0.0,1.0)), hash(i + vec3(1.0,0.0,1.0)), f.x),
-                        mix(hash(i + vec3(0.0,1.0,1.0)), hash(i + vec3(1.0,1.0,1.0)), f.x), f.y), f.z
-                );
+                float a = hash(i);
+                float b = hash(i + vec2(1.0, 0.0));
+                float c = hash(i + vec2(0.0, 1.0));
+                float d = hash(i + vec2(1.0, 1.0));
+                return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
             }
-            float fbm(vec3 p) {
-                float v = 0.0, a = 0.5;
+            float fbm(vec2 p) {
+                float v = 0.0, add = 0.5;
                 for (int i = 0; i < 5; i++) {
-                    v += a * noise(p);
+                    v += add * noise(p);
                     p *= 2.0;
-                    a *= 0.5;
+                    add *= 0.5;
                 }
                 return v;
             }
 
             void main() {
-                vec3 n = normalize(vNormal);
-                vec3 v = normalize(vViewPosition);
-                float fresnel = 1.0 - max(dot(n, v), 0.0);
+                vec2 uv = vUv * 2.0 - 1.0;
+                float r = length(uv);
+                float theta = atan(uv.y, uv.x);
                 
-                float phi = vUv.y * 3.14159;
-                float theta = vUv.x * 3.14159 * 2.0;
-                vec3 pos = vec3(sin(phi)*cos(theta), cos(phi), sin(phi)*sin(theta));
+                // Spiral warp equation
+                float swirl = theta + r * 6.5 - uTime * 0.10;
                 
-                vec3 col = vec3(0.0); 
+                // Two main spiral arms
+                float arms = abs(sin(swirl));
+                arms = pow(1.0 - arms, 5.0); // thin out arms
                 
-                if (uType < 0.25) {
-                    // Cracked Magma planet
-                    float n1 = fbm(pos * 3.0 + vec3(uSeed));
-                    // thin cracks where n1 is near 0.5
-                    float cracks = 1.0 - smoothstep(0.0, 0.04, abs(n1 - 0.5));
-                    cracks *= fbm(pos * 15.0 + vec3(uSeed)); // break them up
-                    
-                    vec3 magma = vec3(1.5, 0.4, 0.05) * cracks; // bright fire
-                    vec3 rock = vec3(0.015, 0.015, 0.02) * fbm(pos * 8.0);
-                    col = rock + magma;
-                    col += vec3(0.0, 0.05, 0.1) * pow(fresnel, 4.0); // dim blue rim
-
-                } else if (uType < 0.50) {
-                    // Dark banded reddish gas giant
-                    float warp = fbm(pos * 2.5 + vec3(uSeed)) * 1.5;
-                    float band = fbm(vec3(0.0, pos.y * 6.0 + warp, 0.0));
-                    
-                    vec3 darkBase = vec3(0.0, 0.0, 0.0);
-                    vec3 darkRed = vec3(0.12, 0.02, 0.01);
-                    col = mix(darkBase, darkRed, band);
-                    col += vec3(0.15, 0.05, 0.0) * pow(fresnel, 4.0); // rusty rim scatter
-                    
-                } else if (uType < 0.75) {
-                    // Pitch Black Eclipse Silhouette
-                    vec3 darkBase = vec3(0.0, 0.0, 0.0);
-                    float rim = pow(fresnel, 7.0);
-                    vec3 rimColor = vec3(0.2, 0.6, 1.0); // bright blue/white eclipse edge
-                    col = darkBase + rimColor * rim * 1.5;
-                    
-                } else {
-                    // Dead, dark rocky moon
-                    float n1 = fbm(pos * 10.0 + vec3(uSeed));
-                    vec3 rockColor = vec3(0.04, 0.04, 0.05) * n1;
-                    col = rockColor + vec3(0.08) * pow(fresnel, 5.0);
-                }
+                // Dense central core
+                float core = exp(-r * 15.0); // exceptionally bright tight core
                 
-                gl_FragColor = vec4(col, 1.0);
+                // Dense procedural dust cloud
+                float dust = fbm(uv * 12.0 - uTime * 0.05);
+                
+                // Colors: Deep blue/white galaxy core
+                vec3 coreColor = vec3(0.9, 0.95, 1.0) * core * 3.0;
+                vec3 armColor = vec3(0.2, 0.4, 0.9) * arms * dust * 2.0;
+                vec3 dustBelt = vec3(0.8, 0.4, 0.1) * dust * exp(-r * 4.0) * 0.6; // inner brown dust
+                
+                vec3 col = coreColor + armColor + dustBelt;
+                
+                // Distant void masking (soft circular clipping)
+                float mask = smoothstep(0.9, 0.2, r);
+                
+                // Additive blend alpha map
+                gl_FragColor = vec4(col, mask);
             }
         `,
-        transparent: false,
-        fog: false
-    });
-
-    const MOON_COUNT = 4;
-    for (let i = 0; i < MOON_COUNT; i++) {
-        const mat = planetMat.clone();
-        mat.uniforms.uSeed.value = Math.random() * 100.0;
-        mat.uniforms.uType.value = (i / MOON_COUNT) + 0.01;
-
-        const moon = new THREE.Mesh(planetGeo, mat);
-
-        let dist = 100;
-        let scale = 4.0;
-        let theta = Math.PI + 0.3 + (i * Math.PI / 2.0); // Space by 90 degrees full panorama
-        let phi = 0;
-
-        if (i === 0) {
-            // Magma: Far far out
-            dist = 230.0;
-            scale = 4.5;
-            phi = 0.1; // Slightly up in the deep distance
-        } else if (i === 1) {
-            // Gas Giant: Upper
-            dist = 130.0;
-            scale = 3.5;
-            phi = 0.35; // Upper
-        } else if (i === 2) {
-            // Eclipse: Horizon
-            dist = 110.0;
-            scale = 4.0;
-            phi = 0.08;
-        } else if (i === 3) {
-            // Dead Rocky Moon: Bottom
-            dist = 90.0;
-            scale = 5.0; // Foreground
-            phi = -0.28; // Bottom (below the board rendering plane)
-        }
-
-        // Accurate Y-UP Cartesian map
-        moon.position.set(
-            dist * Math.sin(theta) * Math.cos(phi),      // X
-            dist * Math.sin(phi) - 1.0,                  // Y 
-            dist * Math.cos(theta) * Math.cos(phi)       // Z
-        );
-        moon.scale.setScalar(scale);
-        moon.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-        moon.userData = {
-            rotSpeed: new THREE.Vector3((Math.random() - 0.5) * 0.0005, (Math.random() - 0.5) * 0.0005, (Math.random() - 0.5) * 0.0005)
-        };
-        group.add(moon);
-        moons.push(moon);
-    }
-
-    // ── 4. Asteroids — realistic space rocks ─────────────────────
-    const asteroids = [];
-
-    // Create a procedural noise texture for asteroid micro-roughness bump mapping
-    const bCanvas = document.createElement("canvas");
-    bCanvas.width = 128; bCanvas.height = 128;
-    const ctx = bCanvas.getContext("2d");
-    const imgData = ctx.createImageData(128, 128);
-    for (let i = 0; i < imgData.data.length; i += 4) {
-        const v = Math.floor(Math.random() * 255);
-        imgData.data[i] = v; imgData.data[i + 1] = v; imgData.data[i + 2] = v; imgData.data[i + 3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-    const rockBump = new THREE.CanvasTexture(bCanvas);
-    rockBump.wrapS = THREE.RepeatWrapping;
-    rockBump.wrapT = THREE.RepeatWrapping;
-
-    // Use detail level 2 for more facets (less low-poly look)
-    const asteroidGeo = new THREE.IcosahedronGeometry(1, 2);
-    // Base deformation
-    const aPos = asteroidGeo.attributes.position;
-    for (let i = 0; i < aPos.count; i++) {
-        const scale = 0.8 + Math.random() * 0.4;
-        aPos.setXYZ(i, aPos.getX(i) * scale, aPos.getY(i) * scale, aPos.getZ(i) * scale);
-    }
-    aPos.needsUpdate = true;
-    asteroidGeo.computeVertexNormals();
-
-    const asteroidMat = new THREE.MeshStandardMaterial({
-        color: 0x111111,          // Darker base (asteroids have very low albedo)
-        roughness: 0.85,
-        metalness: 0.4,           // Iron-rich metallic glint
-        bumpMap: rockBump,
-        bumpScale: 0.08,
-        flatShading: true,        // Keeps the rugged rocky facets
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
         fog: false,
+        side: THREE.BackSide
     });
+    const spiralPlane = new THREE.Mesh(spiralGeo, spiralMat);
+    // Positioned just beneath the horizon plane so it is permanently visible beneath the board
+    spiralPlane.position.set(0, -60, -90);
+    // Tilted gracefully so it stretches beneath the playable area deep into the skybox
+    spiralPlane.rotation.x = -Math.PI / 2.3;
+    spiralPlane.rotation.z = Math.PI / 6;
+    group.add(spiralPlane);
 
-    const ASTEROID_COUNT = 30; // Reduced considerably as requested
-    for (let i = 0; i < ASTEROID_COUNT; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const dist = 30 + Math.random() * 45;
-
-        const scale = 0.15 + Math.random() * 0.6;
-        const asteroid = new THREE.Mesh(asteroidGeo.clone(), asteroidMat.clone());
-
-        // Further deform each clone so rocks look uniquely shaped
-        const clonePos = asteroid.geometry.attributes.position;
-        for (let j = 0; j < clonePos.count; j++) {
-            const s = 0.85 + Math.random() * 0.3;
-            clonePos.setXYZ(j, clonePos.getX(j) * s, clonePos.getY(j) * s, clonePos.getZ(j) * s);
-        }
-        clonePos.needsUpdate = true;
-        asteroid.geometry.computeVertexNormals();
-
-        // Subtle color tint (iron, carbon, silica variations)
-        const hue = Math.random() > 0.5 ? 0.05 : 0.6;
-        const sat = Math.random() * 0.1;
-        asteroid.material.color.setHSL(hue, sat, 0.05 + Math.random() * 0.1);
-
-        asteroid.scale.setScalar(scale);
-        asteroid.position.set(
-            dist * Math.sin(phi) * Math.cos(theta),
-            dist * Math.sin(phi) * Math.sin(theta),
-            dist * Math.cos(phi)
-        );
-        asteroid.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-
-        group.add(asteroid);
-        asteroids.push({
-            mesh: asteroid,
-            rotSpeed: new THREE.Vector3(
-                (Math.random() - 0.5) * 0.008,
-                (Math.random() - 0.5) * 0.008,
-                (Math.random() - 0.5) * 0.008
-            ),
-            orbitSpeed: (Math.random() - 0.5) * 0.0004,
-            orbitAxis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
-        });
-    }
+    // Asteroids removed entirely per user request
 
     // ── 5. Distant star cluster (dense background dust) ──────────
     const dustCount = 4500;
@@ -449,24 +303,10 @@ export function createGalaxyBackground(scene) {
             nebSphere.rotation.y = T * 0.001;
             dust.rotation.y = T * 0.0015;
 
-            // Asteroids: tumble + slow orbit drift
-            asteroids.forEach(a => {
-                a.mesh.rotation.x += a.rotSpeed.x;
-                a.mesh.rotation.y += a.rotSpeed.y;
-                a.mesh.rotation.z += a.rotSpeed.z;
-                // Drift in orbit
-                a.mesh.position.applyAxisAngle(a.orbitAxis, a.orbitSpeed);
-            });
+            // Asteroids animation logic removed
 
-            // Distant planets: slow rotation + shader time
-            if (moons.length > 0) {
-                moons.forEach(m => {
-                    m.rotation.x += m.userData.rotSpeed.x;
-                    m.rotation.y += m.userData.rotSpeed.y;
-                    m.rotation.z += m.userData.rotSpeed.z;
-                    m.material.uniforms.uTime.value = T;
-                });
-            }
+            // Massive spiral galaxy spinning
+            spiralMat.uniforms.uTime.value = T;
         }
     };
 }
