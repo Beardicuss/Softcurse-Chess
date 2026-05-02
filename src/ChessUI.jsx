@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { W, B } from "./chessEngine.js";
 import { SYM_W, SYM_B, ASSET_CDN } from "./constants.js";
 import { useLang, langCodes } from "./i18n.js";
+import SplashScreen from "./SplashScreen.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 //  CHESS UI — Main Menu + HUD overlay
@@ -829,8 +830,8 @@ export default function ChessUI({
         if (!paused) setPausePanel("main");
     }, [paused]);
 
-    // Intro state machine: "loading" → "video" → "done"
-    const [introState, setIntroState] = useState("loading");
+    // Intro state machine: "splash" → "loading" → "done"
+    const [introState, setIntroState] = useState("splash");
     const videoRef = useRef(null);
 
     // Cycle loading messages while on loading screen
@@ -840,27 +841,30 @@ export default function ChessUI({
         return () => clearInterval(iv);
     }, [introState, phase1Ready]);
 
-    // When user taps "continue" on loading screen and video starts, skip handler
+    // Skip handler — only allow skip after 1s, and guard against double-fire
     useEffect(() => {
-        if (introState !== "video") return;
-        const onSkip = () => setIntroState("done");
-        window.addEventListener("keydown", onSkip);
-        window.addEventListener("mousedown", onSkip);
+        if (introState !== "splash") return;
+        let skipped = false;
+        const onSkip = () => {
+            if (skipped) return;
+            skipped = true;
+            setIntroState("loading");
+        };
+        // Delay adding listeners so page load click doesn't accidentally skip
+        const t = setTimeout(() => {
+            window.addEventListener("keydown", onSkip);
+            window.addEventListener("mousedown", onSkip);
+        }, 1000);
         return () => {
+            clearTimeout(t);
             window.removeEventListener("keydown", onSkip);
             window.removeEventListener("mousedown", onSkip);
         };
     }, [introState]);
 
     const handleTapToContinue = () => {
-        setIntroState("video");
-        // Video will autoplay with sound since this click is the user gesture
-        setTimeout(() => {
-            if (videoRef.current) {
-                videoRef.current.muted = false;
-                videoRef.current.play().catch(() => { });
-            }
-        }, 50);
+        // Once the user agrees to continue past the Loading Screen, we're securely ready to enter the application
+        setIntroState("done");
     };
 
     useEffect(() => {
@@ -942,28 +946,12 @@ export default function ChessUI({
                 </div>
             )}
 
-            {/* ── INTRO VIDEO (plays with sound after user tap) ──────── */}
-            {introState === "video" && (
-                <div style={{
-                    position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                    zIndex: 9999, background: "#000",
-                }}>
-                    <video
-                        ref={videoRef}
-                        src={`${ASSET_CDN}/flash_screen.mp4`}
-                        autoPlay
-                        muted
-                        playsInline
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                        onEnded={() => setIntroState("done")}
-                    />
-                    <div style={{
-                        position: "absolute", bottom: 40, width: "100%", textAlign: "center",
-                        color: "rgba(197,160,89,0.5)", fontSize: "12px", letterSpacing: "4px",
-                    }}>
-                        PRESS ANY KEY TO SKIP
-                    </div>
-                </div>
+            {/* ── NATIVE CANVAS SPLASH SCREEN (Runs FIRST) ──────── */}
+            {introState === "splash" && (
+                <SplashScreen
+                    logoSrc="/intro/logo.png"
+                    onComplete={() => setIntroState("loading")}
+                />
             )}
 
             {/* ── MAIN MENU ─────────────────────────────────────── */}

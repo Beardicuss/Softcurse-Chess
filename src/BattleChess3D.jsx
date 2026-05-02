@@ -216,24 +216,25 @@ export default function BattleChess3D() {
     }
 
     // Phase 1: board + ground + figures + walls
-    const phase1Total = 4; // board, ground, walls, figures
+    const phase1Total = 4;
     let phase1Loaded = 0;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const boardGroup = createProceduralBoard(scene);
     scene.add(boardGroup);
-    const p1Board = Promise.resolve(); phase1tick();
-    const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
-    // Let walls.glb KEEP its authored metallic/roughness values from the generated textures
-    const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
-    const p1Figures = preloadModels().then(() => phase1tick());
 
-    // Debug scene dump removed (was leaking undisposed keydown listener)
-
-    Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
-      setPhase1Ready(true);
-      setAllPhasesReady(true);
-    });
+    // Delay heavy GLB loading until splash is done — avoids CPU/bandwidth competition
+    const startLoading = () => {
+      const p1Board = Promise.resolve(); phase1tick();
+      const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+      const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
+      const p1Figures = preloadModels().then(() => phase1tick());
+      Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
+        setPhase1Ready(true);
+        setAllPhasesReady(true);
+      });
+    };
+    setTimeout(startLoading, 7200);
 
     const sqMeshes = [];
     const hitMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, visible: false, depthWrite: false });
