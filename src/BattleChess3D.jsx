@@ -301,25 +301,38 @@ export default function BattleChess3D() {
       };
     }
 
+    // Glowing dark purple selection disc
+    const selGlowMat = new THREE.MeshBasicMaterial({
+      color: 0x341539, transparent: true, opacity: 0,
+      side: THREE.DoubleSide, depthWrite: false,
+    });
+    const selGlow = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), selGlowMat);
+    selGlow.rotation.x = -Math.PI / 2;
+    selGlow.position.y = 0.025; // Sits above the marble tiles
+    selGlow.visible = false;
+    scene.add(selGlow);
+
     // Pre-flatten for clearHL performance (avoid .flat() per call)
     const flatSqMeshes = sqMeshes.flat();
 
     function clearHL() {
       flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
+      selGlow.visible = false;
+      selGlowMat.opacity = 0;
     }
 
     function showHL(sel, moves, last, checkC, board) {
       clearHL();
-      let cHex = THEME.brass; // fallback
+
       if (sel) {
         const [r, f] = sel;
-        const pc = board[r][f];
-        if (pc) cHex = pc.c === 'w' ? THEME.whiteAccent : THEME.blackAccent;
 
-        const m = sqMeshes[r][f];
-        m.userData.mat.visible = true;
-        m.userData.mat.color.setHex(cHex);
-        m.userData.mat.opacity = 0.45;
+        // Ensure pulse disc is active beneath the piece ONLY (no flat square shading)
+        selGlowMat.color.setHex(0x341539);
+        selGlowMat.opacity = 0.7;
+        const sPos = toWorld(r, f);
+        selGlow.position.set(sPos.x, 0.025, sPos.z);
+        selGlow.visible = true;
       }
 
       // Removed the DOM_POOL / RING_POOL iteration here per user request for a cleaner look.
@@ -840,6 +853,14 @@ export default function BattleChess3D() {
       updateCam();
 
       if (galaxy && galaxy.tick) galaxy.tick(time);
+
+      // Pulsing dark purple glow disc under selected piece
+      if (selGlow.visible) {
+        const pulse = 0.4 + Math.sin(time * 0.005) * 0.3; // 0.1 → 0.7
+        selGlowMat.opacity = pulse;
+        const s = 1.0 + Math.sin(time * 0.004) * 0.12;   // subtle scale breathe
+        selGlow.scale.set(s, s, 1);
+      }
 
       // In-place compaction: zero allocations, no splice GC pressure
       let writeIdx = 0;
