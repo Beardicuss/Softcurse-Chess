@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // ── Module imports ──────────────────────────────────────────────
@@ -14,6 +15,7 @@ import { createGalaxyBackground } from "./galaxyBackground.js";
 import * as OnlineEngine from "./onlineEngine.js";
 import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 import { getElo, updateElo } from './eloSystem.js';
+import { createProceduralBoard } from './chessBoard.js';
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -175,6 +177,7 @@ export default function BattleChess3D() {
     const boardGrp = new THREE.Group();
     scene.add(boardGrp);
     const gltfLoader = new GLTFLoader();
+    gltfLoader.setMeshoptDecoder(MeshoptDecoder);
 
     function addBoardModel(gltf, preserveMaterials = false) {
       const model = gltf.scene;
@@ -217,7 +220,9 @@ export default function BattleChess3D() {
     let phase1Loaded = 0;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
-    const p1Board = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/board.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+    const boardGroup = createProceduralBoard(scene);
+    scene.add(boardGroup);
+    const p1Board = Promise.resolve(); phase1tick();
     const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
     // Let walls.glb KEEP its authored metallic/roughness values from the generated textures
     const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
@@ -296,35 +301,13 @@ export default function BattleChess3D() {
       };
     }
 
-    const DOT_POOL = Array.from({ length: 28 }, () => {
-      const m = new THREE.Mesh(new THREE.CircleGeometry(0.18, 20), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m;
-    });
-    const RING_POOL = Array.from({ length: 28 }, () => {
-      const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.44, 24), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
-      m.rotation.x = -Math.PI / 2; m.visible = false; scene.add(m); return m;
-    });
-    // Glowing selection disc (replaces invisible PointLight)
-    const selGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff, transparent: true, opacity: 0,
-      side: THREE.DoubleSide, depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    const selGlow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 32), selGlowMat);
-    selGlow.rotation.x = -Math.PI / 2;
-    selGlow.position.y = 0.025;
-    selGlow.visible = false;
-    scene.add(selGlow);
-
     // Pre-flatten for clearHL performance (avoid .flat() per call)
     const flatSqMeshes = sqMeshes.flat();
 
     function clearHL() {
       flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
-      DOT_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
-      RING_POOL.forEach(m => { m.visible = false; m.material.opacity = 0; });
-      selGlow.visible = false; selGlowMat.opacity = 0;
     }
+
     function showHL(sel, moves, last, checkC, board) {
       clearHL();
       let cHex = THEME.brass; // fallback
@@ -337,23 +320,10 @@ export default function BattleChess3D() {
         m.userData.mat.visible = true;
         m.userData.mat.color.setHex(cHex);
         m.userData.mat.opacity = 0.45;
-
-        // Activate visible glowing disc underneath the piece
-        selGlowMat.color.setHex(cHex);
-        selGlowMat.opacity = 0.7;
-        const sPos = toWorld(r, f);
-        selGlow.position.set(sPos.x, 0.025, sPos.z);
-        selGlow.visible = true;
       }
-      moves.forEach(([tr, tf], i) => {
-        const isCap = board[tr][tf] !== null;
-        const pool = isCap ? RING_POOL : DOT_POOL;
-        const m = pool[i]; if (!m) return;
-        const pos = toWorld(tr, tf);
-        m.position.set(pos.x, 0.08, pos.z);
-        m.material.color.setHex(cHex);
-        m.visible = true; m.material.opacity = 0.8;
-      });
+
+      // Removed the DOM_POOL / RING_POOL iteration here per user request for a cleaner look.
+
       if (last) {
         const f = sqMeshes[last.fr][last.ff], t = sqMeshes[last.tr][last.tf];
         f.userData.mat.visible = t.userData.mat.visible = true;
@@ -870,14 +840,6 @@ export default function BattleChess3D() {
       updateCam();
 
       if (galaxy && galaxy.tick) galaxy.tick(time);
-
-      // Pulsing glow disc under selected piece
-      if (selGlow.visible) {
-        const pulse = 0.5 + Math.sin(time * 0.005) * 0.3; // 0.2 → 0.8
-        selGlowMat.opacity = pulse;
-        const s = 1.0 + Math.sin(time * 0.004) * 0.12;   // subtle scale breathe
-        selGlow.scale.set(s, s, 1);
-      }
 
       // In-place compaction: zero allocations, no splice GC pressure
       let writeIdx = 0;

@@ -102,6 +102,6 @@ function createAntiqueStoneMaterial(style) {
                 #include <colorspace_fragment>
             }
         `,
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
     });
 }

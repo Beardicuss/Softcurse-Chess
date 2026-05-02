@@ -93,7 +93,6 @@ export function createGalaxyBackground(scene) {
 
     // ── 2. Stars — layered: dim field + bright twinklers ─────────
     const STAR_COUNT = 15000;
-    const BRIGHT_COUNT = 800;
     const sPos = new Float32Array(STAR_COUNT * 3);
     const sCol = new Float32Array(STAR_COUNT * 3);
     const sSize = new Float32Array(STAR_COUNT);
@@ -117,24 +116,24 @@ export function createGalaxyBackground(scene) {
             sCol[i * 3] = 1.0; sCol[i * 3 + 1] = 1.0; sCol[i * 3 + 2] = 1.0;
         }
 
-        sSize[i] = i < BRIGHT_COUNT ? 2.0 + Math.random() * 3.0 : 0.06 + Math.random() * 0.15;
+        sSize[i] = 0.06 + Math.random() * 0.15;
     }
 
     const sGeo = new THREE.BufferGeometry();
     sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
-    sGeo.setAttribute("color", new THREE.BufferAttribute(sCol, 3));
+    sGeo.setAttribute("aColor", new THREE.BufferAttribute(sCol, 3));
     sGeo.setAttribute("size", new THREE.BufferAttribute(sSize, 1));
 
     const sMat = new THREE.ShaderMaterial({
         uniforms: { uTime: { value: 0 } },
         vertexShader: `
             attribute float size;
-            attribute vec3 color;
+            attribute vec3 aColor;
             varying vec3 vColor;
             varying float vSize;
             uniform float uTime;
             void main() {
-                vColor = color;
+                vColor = aColor;
                 vSize = size;
                 vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
                 // Make bright stars twinkle slightly
@@ -276,7 +275,7 @@ export function createGalaxyBackground(scene) {
     }
     const dGeo = new THREE.BufferGeometry();
     dGeo.setAttribute("position", new THREE.BufferAttribute(dPos, 3));
-    dGeo.setAttribute("color", new THREE.BufferAttribute(dCol, 3));
+    dGeo.setAttribute("aColor", new THREE.BufferAttribute(dCol, 3));
     const dustMat = new THREE.PointsMaterial({
         size: 0.08,
         vertexColors: true,
