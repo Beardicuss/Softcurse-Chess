@@ -230,6 +230,7 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
     const [roomCode, setRoomCode] = useState("");
     const [joinInput, setJoinInput] = useState("");
     const [onlineStatus, setOnlineStatus] = useState("");
+    const assignedSideRef = useRef(null); // ✅ FIX: Capture assigned side immediately
 
     const handleModeSelect = (m) => {
         setMode(m);
@@ -254,9 +255,12 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             const code = await createRoom();
             setRoomCode(code);
             setOnlineStatus(t.WAITING_OPP);
-            on("assigned", (s) => setSide(s));
+            on("assigned", (s) => {
+                assignedSideRef.current = s; // ✅ FIX: Store in ref immediately
+                setSide(s); // Still update state for UI
+            });
             on("start", () => {
-                onStart({ mode: "online", diff: null, side: side });
+                onStart({ mode: "online", diff: null, side: assignedSideRef.current || side });
             });
         } catch (e) {
             setOnlineStatus(t.FAILED_CREATE);
@@ -273,10 +277,11 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             const code = await joinRoom(joinInput);
             setRoomCode(code);
             on("assigned", (s) => {
-                setSide(s);
+                assignedSideRef.current = s; // ✅ FIX: Store in ref immediately
+                setSide(s); // Still update state for UI
             });
             on("start", () => {
-                onStart({ mode: "online", diff: null, side: side });
+                onStart({ mode: "online", diff: null, side: assignedSideRef.current || side });
             });
             setOnlineStatus(t.CONNECTED);
         } catch (e) {
@@ -421,19 +426,19 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     </div>
 
                     {[
-                        { key: t.DIFF_1, icon: "🌿", desc: t.DIFF_1_DESC, col: "#00ffff" },
-                        { key: t.DIFF_2, icon: "⚔", desc: t.DIFF_2_DESC, col: "#c5a059" },
-                        { key: t.DIFF_3, icon: "💀", desc: t.DIFF_3_DESC, col: "#ff0044" },
-                        { key: t.DIFF_4, icon: "🧠", desc: t.DIFF_4_DESC, col: "#bf5af2" },
-                    ].map(({ key, icon, desc, col }) => (
+                        { id: "RECRUIT", label: t.DIFF_1, icon: "🌿", desc: t.DIFF_1_DESC, col: "#00ffff" },
+                        { id: "SOLDIER", label: t.DIFF_2, icon: "⚔", desc: t.DIFF_2_DESC, col: "#c5a059" },
+                        { id: "COMMANDER", label: t.DIFF_3, icon: "💀", desc: t.DIFF_3_DESC, col: "#ff0044" },
+                        { id: "GRANDMASTER", label: t.DIFF_4, icon: "🧠", desc: t.DIFF_4_DESC, col: "#bf5af2" },
+                    ].map(({ id, label, icon, desc, col }) => (
                         <button
-                            key={key}
-                            onClick={() => setDiff(key)}
+                            key={id}
+                            onClick={() => setDiff(id)}
                             style={{
                                 width: "100%",
-                                background: diff === key ? `${col}18` : "rgba(5,1,10,0.4)",
-                                border: `1px solid ${diff === key ? col : "rgba(197,160,89,0.2)"}`,
-                                color: diff === key ? col : "rgba(197,160,89,0.65)",
+                                background: diff === id ? `${col}18` : "rgba(5,1,10,0.4)",
+                                border: `1px solid ${diff === id ? col : "rgba(197,160,89,0.2)"}`,
+                                color: diff === id ? col : "rgba(197,160,89,0.65)",
                                 padding: "18px 28px",
                                 marginBottom: "12px",
                                 fontFamily: "'Cinzel', serif",
@@ -444,17 +449,17 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                                 alignItems: "center",
                                 gap: "20px",
                                 transition: "all 0.2s",
-                                boxShadow: diff === key ? `0 0 20px ${col}33` : "none",
+                                boxShadow: diff === id ? `0 0 20px ${col}33` : "none",
                                 cursor: "pointer",
                                 backdropFilter: "blur(4px)",
                             }}
                         >
                             <span style={{ fontSize: "26px" }}>{icon}</span>
                             <div>
-                                <div style={{ fontWeight: 700 }}>{key}</div>
+                                <div style={{ fontWeight: 700 }}>{label}</div>
                                 <div style={{ fontSize: "13px", opacity: 0.7, letterSpacing: "1.5px", marginTop: "4px" }}>{desc}</div>
                             </div>
-                            {diff === key && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ {t.SELECTED}</span>}
+                            {diff === id && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ {t.SELECTED}</span>}
                         </button>
                     ))}
 
