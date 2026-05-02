@@ -99,9 +99,9 @@ export default function BattleChess3D() {
     scene.fog = new THREE.FogExp2(THEME.bg, THEME.fogDensity);
     const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 500);
     const _lastCamPos = new THREE.Vector3(); // dirty flag for updateAntiqueStoneMaterials
-    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(EW, EH);
-    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = !isMobile;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;

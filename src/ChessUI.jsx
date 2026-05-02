@@ -650,11 +650,25 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
     const { t } = useLang();
     const [panel, setPanel] = useState("main"); // "main" | "newgame" | "credits" | "howtoplay"
     const [visible, setVisible] = useState(false);
+    const touchStartX = useRef(null);
 
     useEffect(() => {
         const tObj = setTimeout(() => setVisible(true), 200);
         return () => clearTimeout(tObj);
     }, []);
+
+    const handleTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e) => {
+        if (touchStartX.current === null) return;
+        const diff = e.changedTouches[0].clientX - touchStartX.current;
+        if (diff > 50 && panel !== "main") {
+            setPanel("main");
+        }
+        touchStartX.current = null;
+    };
 
     const MENU_ITEMS = [
         { label: t.NEW_GAME, icon: "⚔", panel: "newgame", delay: 0 },
@@ -666,13 +680,17 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
     ];
 
     return (
-        <div style={{
-            position: "absolute", inset: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 50,
-            background: "radial-gradient(ellipse at center, rgba(5,1,10,0.7) 0%, rgba(5,1,10,0.92) 100%)",
-            backdropFilter: "blur(3px)",
-        }}>
+        <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            style={{
+                position: "absolute", inset: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 50,
+                background: "radial-gradient(ellipse at center, rgba(5,1,10,0.7) 0%, rgba(5,1,10,0.92) 100%)",
+                backdropFilter: "blur(3px)",
+            }}
+        >
             <div style={{
                 position: "relative",
                 width: "min(440px, 90vw)",
@@ -913,7 +931,7 @@ export default function ChessUI({
                         ) : (
                             <div style={{
                                 color: "#c5a059", fontSize: "clamp(14px, 3.5vw, 18px)", letterSpacing: "clamp(4px, 1.5vw, 8px)",
-                                fontFamily: "'Cinzel', serif",
+                                fontFamily: "'Cinzel', serif", textAlign: "center",
                                 animation: "loadingPulse 1.5s ease-in-out infinite",
                                 cursor: "pointer",
                             }}>
@@ -1004,56 +1022,35 @@ export default function ChessUI({
                         </div>
                     )}
 
-                    {/* Top Right Buttons (Lock + Fullscreen) */}
+                    {/* Top Right Buttons (Fullscreen) */}
                     {!paused && (
                         <div style={{
                             position: "absolute", top: "clamp(6px, 1.5vw, 12px)", right: "clamp(6px, 1.5vw, 12px)",
                             display: "flex", gap: "8px", zIndex: 90, pointerEvents: "auto",
                         }}>
-                            {/* Lock Button (Mobile Only) */}
-                            {('ontouchstart' in window || navigator.maxTouchPoints > 0) && (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            if (screen.orientation?.type?.startsWith('landscape')) {
-                                                screen.orientation.unlock();
-                                            } else {
-                                                const d = document.documentElement;
-                                                if (!document.fullscreenElement) {
-                                                    await (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
-                                                }
-                                                await screen.orientation?.lock?.('landscape');
-                                            }
-                                        } catch (e) {
-                                            console.warn("Orientation API error:", e);
-                                        }
-                                    }}
-                                    style={{
-                                        background: "rgba(5,1,10,0.7)", border: "1px solid rgba(197,160,89,0.3)",
-                                        color: "#c5a059", fontSize: "16px", padding: "6px 12px",
-                                        cursor: "pointer", fontFamily: "'Cinzel', serif",
-                                        backdropFilter: "blur(4px)", borderRadius: "4px", display: "flex", alignItems: "center"
-                                    }}
-                                >⤢ LOCK</button>
-                            )}
-
-                            {/* Fullscreen Button */}
+                            {/* Fullscreen & Orientation Lock Button */}
                             <button
-                                onClick={() => {
-                                    const d = document.documentElement;
-                                    if (!document.fullscreenElement) {
-                                        (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
-                                    } else {
-                                        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+                                onClick={async () => {
+                                    try {
+                                        const d = document.documentElement;
+                                        if (!document.fullscreenElement) {
+                                            await (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
+                                            await screen.orientation?.lock?.('landscape').catch(() => { });
+                                        } else {
+                                            (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+                                            screen.orientation?.unlock?.();
+                                        }
+                                    } catch (e) {
+                                        console.warn("Fullscreen API or Orientation lock failed:", e);
                                     }
                                 }}
                                 style={{
                                     background: "rgba(5,1,10,0.7)", border: "1px solid rgba(197,160,89,0.3)",
-                                    color: "#c5a059", fontSize: "18px", padding: "6px 10px",
+                                    color: "#c5a059", fontSize: "16px", padding: "6px 12px",
                                     cursor: "pointer", fontFamily: "'Cinzel', serif",
-                                    backdropFilter: "blur(4px)", borderRadius: "4px",
+                                    backdropFilter: "blur(4px)", borderRadius: "4px", display: "flex", alignItems: "center"
                                 }}
-                            >⛶</button>
+                            >⛶ FS</button>
                         </div>
                     )}
 
