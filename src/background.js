@@ -1,13 +1,12 @@
 import * as THREE from "three";
 
 // ═══════════════════════════════════════════════════════════════
-//  NOKRON, ETERNAL CITY — VOID SKY
-//  The underground star ocean of Nokron: a black abyss lit only
-//  by ancient cold starlight and the ethereal glow of the Mimic
-//  Tear. No warmth exists here — only silver, cyan, and dark.
+//  UNDERGROUND STAR CITY — VOID SKY
+//  Inspired by ancient subterranean ruins: black-blue stone,
+//  silver starlight, cyan haze, and a vast impossible night below.
 // ═══════════════════════════════════════════════════════════════
 
-export function createGalaxyBackground(scene) {
+export function createBackground(scene) {
 
     const group = new THREE.Group();
     scene.add(group);
@@ -56,10 +55,10 @@ export function createGalaxyBackground(scene) {
             void main(){
                 vec3 n = normalize(vPos);
 
-                // ── Nokron star river (cold, structural, no warmth) ──
-                // Slight diagonal band like a frozen Milky Way
-                vec3 axis = normalize(vec3(0.15, 1.0, 0.25));
-                float band = smoothstep(0.35, 0.0, abs(dot(n, axis)));
+                // ── Cold subterranean star river ──
+                // Slanted, architectural, and quiet rather than cosmic-bright.
+                vec3 axis = normalize(vec3(0.10, 1.0, 0.32));
+                float band = smoothstep(0.42, 0.0, abs(dot(n, axis)));
 
                 vec3 riverCol = vec3(0.0);
                 
@@ -68,24 +67,26 @@ export function createGalaxyBackground(scene) {
                     float dustA = fbm(n * 10.0 + vec3(uTime * 0.0008));
                     float dustB = fbm(n * 4.5  - vec3(uTime * 0.0004));
 
-                    float river = band * (dustA * 1.2 + dustB * 0.4);
+                    float river = band * (dustA * 1.05 + dustB * 0.55);
 
-                    vec3 riverCore  = vec3(0.55, 0.72, 1.00) * river * smoothstep(0.10, 0.0, abs(dot(n, axis))) * 0.6;
-                    vec3 riverEdge  = vec3(0.20, 0.50, 0.75) * band * dustA * 0.35;
+                    vec3 riverCore  = vec3(0.62, 0.78, 1.00) * river * smoothstep(0.13, 0.0, abs(dot(n, axis))) * 0.45;
+                    vec3 riverEdge  = vec3(0.10, 0.42, 0.62) * band * dustA * 0.38;
+                    vec3 violetDepth = vec3(0.035, 0.025, 0.075) * band * dustB * 0.65;
 
                     float darkLane  = smoothstep(0.35, 0.65, fbm(n * 14.0));
-                    riverCol  = (riverCore + riverEdge) * (1.0 - darkLane * 0.75);
+                    riverCol  = (riverCore + riverEdge + violetDepth) * (1.0 - darkLane * 0.78);
                 }
 
                 vec3 cyanHaze = vec3(0.0);
                 // PERFORMANCE BRANCH: Skip faint cyan nebula wisps if inside the intensely bright core
                 if (band < 0.9) {
                     float neb = fbm(n * 6.0 + vec3(-0.7, 0.4, uTime * 0.0003));
-                    cyanHaze = vec3(0.04, 0.12, 0.22) * neb * (1.0 - band) * 0.8;
+                    cyanHaze = vec3(0.025, 0.13, 0.20) * neb * (1.0 - band) * 0.75;
                 }
 
-                // ── Void base: pitch black with the faintest deep navy ──
-                vec3 base = vec3(0.000, 0.002, 0.010);
+                // ── Void base: near-black with blue-violet depth ──
+                float lowerVignette = smoothstep(-0.55, 0.8, n.y);
+                vec3 base = mix(vec3(0.000, 0.001, 0.006), vec3(0.004, 0.010, 0.022), lowerVignette);
 
                 gl_FragColor = vec4(base + riverCol + cyanHaze, 1.0);
             }
@@ -103,7 +104,7 @@ export function createGalaxyBackground(scene) {
     // handful of brighter cyan "sentinel stars".
     // PERFORMANCE FIX: Halved the celestial background stars to instantly fix mobile overdraw clipping.
     // Raised particle size slightly to compensate for volume.
-    const STAR_COUNT = 10000;
+    const STAR_COUNT = 6500;
     const sPos = new Float32Array(STAR_COUNT * 3);
     const sCol = new Float32Array(STAR_COUNT * 3);
     const sSize = new Float32Array(STAR_COUNT);
@@ -120,24 +121,23 @@ export function createGalaxyBackground(scene) {
         if (type < 0.50) {
             // Common: pale silver-white
             const w = 0.75 + Math.random() * 0.25;
-            sCol[i * 3] = w * 0.88; sCol[i * 3 + 1] = w * 0.94; sCol[i * 3 + 2] = w;
+            sCol[i * 3] = w * 0.78; sCol[i * 3 + 1] = w * 0.88; sCol[i * 3 + 2] = w;
         } else if (type < 0.78) {
             // Cold blue-white
-            sCol[i * 3] = 0.60 + Math.random() * 0.20;
-            sCol[i * 3 + 1] = 0.78 + Math.random() * 0.15;
+            sCol[i * 3] = 0.48 + Math.random() * 0.22;
+            sCol[i * 3 + 1] = 0.68 + Math.random() * 0.18;
             sCol[i * 3 + 2] = 1.0;
         } else if (type < 0.93) {
             // Faint cyan — mimic tear glow
-            sCol[i * 3] = 0.30 + Math.random() * 0.20;
-            sCol[i * 3 + 1] = 0.70 + Math.random() * 0.20;
-            sCol[i * 3 + 2] = 0.90 + Math.random() * 0.10;
+            sCol[i * 3] = 0.22 + Math.random() * 0.18;
+            sCol[i * 3 + 1] = 0.62 + Math.random() * 0.20;
+            sCol[i * 3 + 2] = 0.88 + Math.random() * 0.12;
         } else {
             // Rare bright sentinel star — pure cold white
             sCol[i * 3] = 1.0; sCol[i * 3 + 1] = 1.0; sCol[i * 3 + 2] = 1.0;
         }
 
-        // Increased base rendering size dynamically to fill the void
-        sSize[i] = 0.08 + Math.random() * 0.22;
+        sSize[i] = 0.045 + Math.random() * 0.155;
     }
 
     const sGeo = new THREE.BufferGeometry();
@@ -158,8 +158,8 @@ export function createGalaxyBackground(scene) {
                 vSize  = size;
                 vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
                 // Nokron stars breathe very slowly — ancient, not lively
-                float pulse = 1.0 + 0.15 * sin(uTime * 1.2 + position.x * 7.3 + position.z * 4.1);
-                gl_PointSize = size * (280.0 / -mvPos.z) * pulse;
+                float pulse = 1.0 + 0.10 * sin(uTime * 1.2 + position.x * 7.3 + position.z * 4.1);
+                gl_PointSize = size * (230.0 / -mvPos.z) * pulse;
                 gl_Position  = projectionMatrix * mvPos;
             }
         `,
@@ -179,7 +179,7 @@ export function createGalaxyBackground(scene) {
                 } else {
                     alpha = smoothstep(0.5, 0.15, r);
                 }
-                gl_FragColor = vec4(vColor, alpha * 0.85);
+                gl_FragColor = vec4(vColor, alpha * 0.72);
             }
         `,
         fog: false,
@@ -243,14 +243,14 @@ export function createGalaxyBackground(scene) {
                     float core = exp(-r * 12.0);
                     float dust = fbm2(uv * 8.0 - uTime * 0.015);
 
-                    vec3 coreCol = vec3(0.40, 0.65, 1.00) * core * 2.5;
-                    vec3 armCol  = vec3(0.05, 0.18, 0.40) * arms * dust * 1.5;
-                    vec3 mistCol = vec3(0.08, 0.20, 0.35) * dust * exp(-r * 3.0) * 0.8;
+                    vec3 coreCol = vec3(0.28, 0.52, 0.82) * core * 1.35;
+                    vec3 armCol  = vec3(0.025, 0.12, 0.26) * arms * dust * 0.95;
+                    vec3 mistCol = vec3(0.025, 0.12, 0.18) * dust * exp(-r * 3.0) * 0.55;
 
                     col  = coreCol + armCol + mistCol;
                 }
 
-                gl_FragColor = vec4(col, mask * 0.85);
+                gl_FragColor = vec4(col, mask * 0.42);
             }
         `,
         transparent: true,
@@ -260,7 +260,7 @@ export function createGalaxyBackground(scene) {
     });
     const abyssPlane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500, 1, 1), abyssMat);
     // Tilted and positioned far below — the star ocean floor of Nokron
-    abyssPlane.position.set(0, -55, -70);
+    abyssPlane.position.set(0, -72, -100);
     abyssPlane.rotation.x = -Math.PI / 2.5;
     abyssPlane.rotation.z = Math.PI / 8;
     group.add(abyssPlane);
@@ -269,7 +269,7 @@ export function createGalaxyBackground(scene) {
     // The signature of Nokron: tiny silver droplets drifting upward
     // slowly, catching the cold light like liquid starlight.
     // PERFORMANCE FIX: Nuked excessive silver teardrops down by 60%
-    const MIST_COUNT = 2500;
+    const MIST_COUNT = 1250;
     const mPos = new Float32Array(MIST_COUNT * 3);
     const mCol = new Float32Array(MIST_COUNT * 3);
     const mPhase = new Float32Array(MIST_COUNT); // drift phase per particle
@@ -277,8 +277,8 @@ export function createGalaxyBackground(scene) {
     for (let i = 0; i < MIST_COUNT; i++) {
         // Concentrated near the platform, spreading outward
         const angle = Math.random() * Math.PI * 2;
-        const rad = 2 + Math.random() * 22;
-        const ht = -8 + Math.random() * 18;
+        const rad = 8 + Math.random() * 30;
+        const ht = -12 + Math.random() * 22;
         mPos[i * 3] = Math.cos(angle) * rad;
         mPos[i * 3 + 1] = ht;
         mPos[i * 3 + 2] = Math.sin(angle) * rad;
@@ -286,9 +286,9 @@ export function createGalaxyBackground(scene) {
         // Silver-cyan gradient: pure silver to faint cyan
         const silver = 0.5 + Math.random() * 0.5;
         const cyan = Math.random() * 0.3;
-        mCol[i * 3] = silver * 0.75;
-        mCol[i * 3 + 1] = silver * 0.88 + cyan * 0.3;
-        mCol[i * 3 + 2] = silver + cyan * 0.4;
+        mCol[i * 3] = silver * 0.62;
+        mCol[i * 3 + 1] = silver * 0.82 + cyan * 0.35;
+        mCol[i * 3 + 2] = silver + cyan * 0.45;
 
         mPhase[i] = Math.random() * Math.PI * 2;
     }
@@ -316,9 +316,9 @@ export function createGalaxyBackground(scene) {
                 p.z += cos(uTime * 0.35 + aPhase * 2.5) * 0.3;
                 // Fade at top and bottom of drift range
                 float t = drift / 9.0; // -1..1
-                vAlpha = (1.0 - t*t) * 0.55;
+                vAlpha = (1.0 - t*t) * 0.34;
                 vec4 mvPos = modelViewMatrix * vec4(p, 1.0);
-                gl_PointSize = 1.5 * (120.0 / -mvPos.z);
+                gl_PointSize = 0.85 * (105.0 / -mvPos.z);
                 gl_Position  = projectionMatrix * mvPos;
             }
         `,
@@ -343,7 +343,7 @@ export function createGalaxyBackground(scene) {
 
     // ── 5. Background star dust — deeper cold field ────────────────
     // PERFORMANCE FIX: Dropped to tightly packed minimum volume size to eliminate backbuffer overdraw
-    const DUST_COUNT = 2000;
+    const DUST_COUNT = 1200;
     const dPos = new Float32Array(DUST_COUNT * 3);
     const dCol = new Float32Array(DUST_COUNT * 3);
     for (let i = 0; i < DUST_COUNT; i++) {
@@ -354,15 +354,15 @@ export function createGalaxyBackground(scene) {
         dPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
         dPos[i * 3 + 2] = r * Math.cos(phi);
         // Cold: dark slate-blue dust
-        const b = 0.3 + Math.random() * 0.35;
-        dCol[i * 3] = b * 0.65; dCol[i * 3 + 1] = b * 0.80; dCol[i * 3 + 2] = b;
+        const b = 0.26 + Math.random() * 0.34;
+        dCol[i * 3] = b * 0.45; dCol[i * 3 + 1] = b * 0.68; dCol[i * 3 + 2] = b;
     }
     const dGeo = new THREE.BufferGeometry();
     dGeo.setAttribute("position", new THREE.BufferAttribute(dPos, 3));
     dGeo.setAttribute("color", new THREE.BufferAttribute(dCol, 3));
     const dustMat = new THREE.PointsMaterial({
         size: 0.12, vertexColors: true, // Tweaked dot sizing to balance out less volume
-        transparent: true, opacity: 0.45,
+        transparent: true, opacity: 0.24,
         depthWrite: false, fog: false,
         blending: THREE.AdditiveBlending,
     });

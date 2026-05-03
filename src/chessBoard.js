@@ -3,13 +3,13 @@ import { SZ, OFF } from "./constants.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  PROCEDURAL CHESS BOARD
-//  Marble tiles + antique stone base — zero asset loading
+//  Ancient inlaid stone tiles + cold ruined frame — zero asset loading
 // ═══════════════════════════════════════════════════════════════
 
 const TILE_H = 0.08;    // tile thickness
-const BASE_H = 0.16;    // pedestal height
+const BASE_H = 0.42;    // raised gothic board base
 const BOARD_SIZE = SZ * 8;
-const BORDER = SZ * 0.25; // reduced border to fit within ruins cleanly
+const BORDER = SZ * 0.34;
 
 // ── Marble tile shader ────────────────────────────────────────
 function createMarbleMaterial(isDark) {
@@ -17,18 +17,18 @@ function createMarbleMaterial(isDark) {
         uniforms: {
             u_dark: {
                 value: isDark
-                    ? new THREE.Color(0.04, 0.02, 0.01)   // demon: deeper black
-                    : new THREE.Color(0.65, 0.70, 0.82)   // angel: silver-pearl
+                    ? new THREE.Color(0.012, 0.085, 0.078) // deep Nokron teal stone
+                    : new THREE.Color(0.43, 0.45, 0.43)    // aged moonstone
             },
             u_mid: {
                 value: isDark
-                    ? new THREE.Color(0.25, 0.14, 0.03)   // demon: bronze
-                    : new THREE.Color(0.85, 0.88, 0.95)   // angel: bright silver
+                    ? new THREE.Color(0.030, 0.245, 0.205) // oxidized green-black marble
+                    : new THREE.Color(0.72, 0.74, 0.70)    // worn pale stone
             },
             u_vein: {
                 value: isDark
-                    ? new THREE.Color(0.85, 0.55, 0.08)   // demon: vibrant gold vein
-                    : new THREE.Color(0.45, 0.52, 0.65)   // angel: cool grey vein
+                    ? new THREE.Color(0.050, 0.70, 0.58)   // subtle teal fissure
+                    : new THREE.Color(0.18, 0.27, 0.33)    // cold slate vein
             },
             u_offset: { value: new THREE.Vector2(Math.random() * 10, Math.random() * 10) },
             u_lightDir: { value: new THREE.Vector3(-0.4, 1.0, 0.4).normalize() },
@@ -72,6 +72,7 @@ function createMarbleMaterial(isDark) {
 
             void main() {
                 vec2 uv = vUv * 3.0 + u_offset;
+                float topFace = smoothstep(0.35, 0.85, normalize(vNormal).y);
 
                 // Marble veins — warped fbm
                 float warp = fbm(uv * 1.2);
@@ -80,19 +81,30 @@ function createMarbleMaterial(isDark) {
 
                 // Base marble gradient
                 float grain = fbm(uv * 2.5 + vec2(3.7, 1.2));
-                float t = grain * 0.7 + vein * 0.3;
+                float t = grain * 0.76 + vein * 0.24;
                 vec3 marble = mix(u_dark, u_mid, clamp(t, 0.0, 1.0));
 
                 // Vein color overlay
-                marble = mix(marble, u_vein, vein * 0.65);
+                marble = mix(marble, u_vein, vein * (0.28 + 0.12 * topFace));
+
+                // Fine worn inlay scratches; subtle, not sparkly.
+                float scratch = smoothstep(0.78, 0.98, fbm(uv * 7.0 + vec2(11.0, 3.0)));
+                marble = mix(marble, marble * 1.14, scratch * 0.09 * topFace);
+
+                // Hairline cracks with a faint silver-tear glint.
+                float crack = smoothstep(0.965, 0.998, abs(sin((uv.x * 1.7 - uv.y * 1.15 + warp * 1.8) * 7.0)));
+                marble += vec3(0.35, 0.62, 0.72) * crack * topFace * 0.045;
+
+                // Tile sides should sink into the ruin instead of reading as clean bright slab edges.
+                marble *= mix(0.34, 1.0, topFace);
 
                 // Lighting
-                float diff = max(dot(normalize(vNormal), u_lightDir), 0.0) * 0.8 + 0.2;
+                float diff = max(dot(normalize(vNormal), u_lightDir), 0.0) * 0.68 + 0.20;
 
                 // Softened specular highlight to prevent harsh triangle artifacts on large quads
                 vec3 V = normalize(vec3(0.0, 12.0, 6.0) - vWorldPos);
                 vec3 H = normalize(u_lightDir + V);
-                float spec = pow(max(dot(normalize(vNormal), H), 0.0), 32.0) * 0.15;
+                float spec = pow(max(dot(normalize(vNormal), H), 0.0), 38.0) * 0.08 * topFace;
 
                 vec3 color = marble * diff + spec;
                 gl_FragColor = vec4(color, 1.0);
@@ -104,12 +116,101 @@ function createMarbleMaterial(isDark) {
     });
 }
 
-// ── Pedestal base / Stone Frame (RGB 157, 160, 157) ─────────────
+// ── Board base / cold stone frame ─────────────────────────────
 function createBaseMaterial() {
     return new THREE.MeshStandardMaterial({
-        color: 0x6a6b65,     // RGB(157, 160, 157)
-        roughness: 0.85,     // matte porous surface
-        metalness: 0.10,     // slight mineral specularity
+        color: 0x0e151c,
+        roughness: 0.88,
+        metalness: 0.08,
+    });
+}
+
+function createRecessMaterial() {
+    return new THREE.MeshStandardMaterial({
+        color: 0x07100f,
+        roughness: 0.94,
+        metalness: 0.03,
+        emissive: 0x021414,
+        emissiveIntensity: 0.08,
+    });
+}
+
+function createInlayMaterial() {
+    return new THREE.MeshStandardMaterial({
+        color: 0x9aaeb2,
+        metalness: 0.55,
+        roughness: 0.36,
+        emissive: 0x153a42,
+        emissiveIntensity: 0.07,
+    });
+}
+
+function addArcadeSide(group, z, dir, totalW, baseMat, recessMat, inlayMat) {
+    const archCount = 6;
+    const span = totalW / archCount;
+    const faceDepth = 0.028;
+    const y = -BASE_H * 0.46;
+    const archRadius = span * 0.34;
+    const panelGeo = new THREE.BoxGeometry(span * 0.82, BASE_H * 0.50, faceDepth);
+    const columnGeo = new THREE.BoxGeometry(0.050, BASE_H * 0.72, 0.052);
+    const footGeo = new THREE.BoxGeometry(0.090, 0.045, 0.060);
+    const railGeo = new THREE.BoxGeometry(totalW, 0.040, 0.055);
+    const archGeo = new THREE.TorusGeometry(archRadius, 0.018, 8, 32, Math.PI);
+
+    const backPanel = new THREE.Mesh(new THREE.BoxGeometry(totalW, BASE_H * 0.58, 0.018), recessMat);
+    backPanel.position.set(0, y - BASE_H * 0.01, z - dir * 0.010);
+    group.add(backPanel);
+
+    const upperRail = new THREE.Mesh(railGeo, inlayMat);
+    upperRail.position.set(0, y + BASE_H * 0.34, z + dir * 0.012);
+    group.add(upperRail);
+
+    const lowerRail = new THREE.Mesh(railGeo, inlayMat);
+    lowerRail.position.set(0, y - BASE_H * 0.34, z + dir * 0.012);
+    group.add(lowerRail);
+
+    for (let i = 0; i < archCount; i++) {
+        const x = -totalW / 2 + span * (i + 0.5);
+        const panel = new THREE.Mesh(panelGeo, recessMat);
+        panel.position.set(x, y - BASE_H * 0.04, z + dir * 0.002);
+        group.add(panel);
+    }
+
+    for (let i = 0; i <= archCount; i++) {
+        const x = -totalW / 2 + i * span;
+        const col = new THREE.Mesh(columnGeo, baseMat);
+        col.position.set(x, y - BASE_H * 0.02, z + dir * 0.022);
+        group.add(col);
+
+        const foot = new THREE.Mesh(footGeo, inlayMat);
+        foot.position.set(x, y - BASE_H * 0.37, z + dir * 0.024);
+        group.add(foot);
+    }
+
+    for (let i = 0; i < archCount; i++) {
+        const x = -totalW / 2 + span * (i + 0.5);
+        const arch = new THREE.Mesh(archGeo, inlayMat);
+        arch.position.set(x, y - BASE_H * 0.09, z + dir * 0.030);
+        arch.scale.y = 1.08;
+        group.add(arch);
+
+        const pendant = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.070, 0.035), inlayMat);
+        pendant.position.set(x, y - BASE_H * 0.22, z + dir * 0.026);
+        group.add(pendant);
+    }
+}
+
+function addGothicDetails(group, totalW, totalD, baseMat, recessMat, inlayMat) {
+    const frontZ = totalD / 2 + 0.012;
+    const backZ = -totalD / 2 - 0.012;
+    addArcadeSide(group, frontZ, 1, totalW, baseMat, recessMat, inlayMat);
+    addArcadeSide(group, backZ, -1, totalW, baseMat, recessMat, inlayMat);
+
+    const trimGeo = new THREE.BoxGeometry(0.040, BASE_H * 0.62, 0.040);
+    [-totalW / 2, totalW / 2].forEach(x => {
+        const sideTrim = new THREE.Mesh(trimGeo, inlayMat);
+        sideTrim.position.set(x, -BASE_H * 0.20, 0);
+        group.add(sideTrim);
     });
 }
 
@@ -120,6 +221,8 @@ export function createProceduralBoard(scene) {
     const darkMat = createMarbleMaterial(true);
     const lightMat = createMarbleMaterial(false);
     const baseMat = createBaseMaterial();
+    const recessMat = createRecessMaterial();
+    const inlayMat = createInlayMaterial();
 
     // ── 8×8 tiles ──────────────────────────────────────────────
     const tileGeo = new THREE.BoxGeometry(SZ, TILE_H, SZ);
@@ -139,6 +242,7 @@ export function createProceduralBoard(scene) {
 
     // ── Border frame (4 strips) ─────────────────────────────────
     const totalW = BOARD_SIZE + BORDER * 2;
+    const totalD = totalW;
     const borderH = TILE_H * 1.0;
     const half = BOARD_SIZE * 0.5;
     const borders = [
@@ -164,16 +268,15 @@ export function createProceduralBoard(scene) {
     baseMesh.receiveShadow = true;
     boardGroup.add(baseMesh);
 
-    // ── Top trim strip (Restored Gold) ──────────────────────────
+    // ── Top trim strip (cold silver-blue inlay) ─────────────────
     const trimW = BOARD_SIZE + (BORDER * 0.1);
     const trimGeo = new THREE.BoxGeometry(trimW, 0.015, trimW);
-    const trimMat = new THREE.MeshStandardMaterial({
-        color: 0xeed39e, metalness: 0.95, roughness: 0.15,
-        emissive: 0xaa7020, emissiveIntensity: 0.25,
-    });
-    const trim = new THREE.Mesh(trimGeo, trimMat);
+    const trim = new THREE.Mesh(trimGeo, inlayMat);
     trim.position.set(0, -0.005, 0); // Nestled right under the tiles
     boardGroup.add(trim);
+
+    // ── Raised gothic arcade relief, inspired by carved stone reliquary boards ──
+    addGothicDetails(boardGroup, totalW, totalD, baseMat, recessMat, inlayMat);
 
     // ── Corner accent cubes ─────────────────────────────────────
     const cornerGeo = new THREE.BoxGeometry(BORDER, borderH * 1.25, BORDER);

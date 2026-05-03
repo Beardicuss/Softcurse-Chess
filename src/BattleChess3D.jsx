@@ -11,12 +11,36 @@ import { makePiece, preloadModels } from "./pieceFactory.js";
 import { AudioEngine } from "./audioEngine.js";
 import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
-import { createGalaxyBackground } from "./galaxyBackground.js";
+import { createBackground } from "./background.js";
 import * as OnlineEngine from "./onlineEngine.js";
 import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 import { getElo, updateElo } from './eloSystem.js';
 import { createProceduralBoard } from './chessBoard.js';
-import { createMoonGround } from "./moonGround.js";
+import { createGround } from "./ground.js";
+
+const GRAPHICS_PRESETS = {
+  mobileLow: { fps: 30, maxPixelRatio: 1, antialias: true, shadows: false, powerPreference: "default" },
+  mobile: { fps: 30, maxPixelRatio: 1.25, antialias: true, shadows: false, powerPreference: "default" },
+  low: { fps: 45, maxPixelRatio: 1, antialias: true, shadows: false, powerPreference: "default" },
+  balanced: { fps: 60, maxPixelRatio: 1.5, antialias: true, shadows: true, powerPreference: "default" },
+  cinematic: { fps: 60, maxPixelRatio: 2, antialias: true, shadows: true, powerPreference: "high-performance" },
+};
+
+function chooseGraphicsPreset(isMobile) {
+  let saved = null;
+  try { saved = localStorage.getItem("battleChessGraphics"); } catch (e) { /* ignore storage restrictions */ }
+  if (saved && GRAPHICS_PRESETS[saved]) return { name: saved, ...GRAPHICS_PRESETS[saved] };
+
+  const memory = navigator.deviceMemory;
+  const cores = navigator.hardwareConcurrency;
+  const lowEndDevice =
+    (typeof memory === "number" && memory <= 4) ||
+    (typeof cores === "number" && cores <= 4);
+
+  if (isMobile) return { name: lowEndDevice ? "mobileLow" : "mobile", ...GRAPHICS_PRESETS[lowEndDevice ? "mobileLow" : "mobile"] };
+  if (lowEndDevice) return { name: "low", ...GRAPHICS_PRESETS.low };
+  return { name: "balanced", ...GRAPHICS_PRESETS.balanced };
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -24,6 +48,7 @@ import { createMoonGround } from "./moonGround.js";
 export default function BattleChess3D() {
   const mountRef = useRef(null);
   const [gameStarted, setGameStarted] = useState(false);
+  useEffect(() => { window._isGameActive = gameStarted; }, [gameStarted]);
   const [msg, setMsg] = useState("TURN_W");
   const [caps, setCaps] = useState({ w: [], b: [] });
   const [moveCount, setMoveCount] = useState(0);
@@ -93,6 +118,8 @@ export default function BattleChess3D() {
 
     // ── Device detection ─────────────────────────────────────────
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const graphics = chooseGraphicsPreset(isMobile);
+    window._battleChessGraphics = graphics.name;
 
     // ── Scene ───────────────────────────────────────────────────
     const scene = new THREE.Scene();
@@ -100,11 +127,10 @@ export default function BattleChess3D() {
     scene.fog = new THREE.FogExp2(THEME.bg, THEME.fogDensity);
     const camera = new THREE.PerspectiveCamera(50, EW / EH, 0.1, 500);
     const _lastCamPos = new THREE.Vector3(); // dirty flag for updateAntiqueStoneMaterials
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: graphics.antialias, powerPreference: graphics.powerPreference });
     renderer.setSize(EW, EH);
-    const maxPixelRatio = isMobile ? 1.5 : 2;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
-    renderer.shadowMap.enabled = !isMobile;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, graphics.maxPixelRatio));
+    renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.5;
@@ -120,7 +146,7 @@ export default function BattleChess3D() {
     }, false);
 
     // ── Galaxy (PC only) ─────────────────────────────────────────
-    const galaxy = isMobile ? null : createGalaxyBackground(scene);
+    const background = isMobile ? null : createBackground(scene);
 
     // ── Lights ───────────────────────────────────────────────────
     if (isMobile) {
@@ -138,8 +164,8 @@ export default function BattleChess3D() {
       const topLeft = new THREE.DirectionalLight(0xffffff, 2.2);
       topLeft.position.set(-4, 14, 0);
       topLeft.target.position.set(0, 0, 0);
-      topLeft.castShadow = true;
-      topLeft.shadow.mapSize.set(1024, 1024);
+      topLeft.castShadow = graphics.shadows;
+      topLeft.shadow.mapSize.set(512, 512);
       topLeft.shadow.camera.near = 1;
       topLeft.shadow.camera.far = 25;
       topLeft.shadow.camera.left = -7;
@@ -220,6 +246,7 @@ export default function BattleChess3D() {
     // Phase 1: board + ground + figures + walls
     const phase1Total = 4;
     let phase1Loaded = 0;
+    let scenePhasesReady = false;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const boardGroup = createProceduralBoard(scene);
@@ -228,11 +255,12 @@ export default function BattleChess3D() {
     // Delay heavy GLB loading until splash is done — avoids CPU/bandwidth competition
     const startLoading = () => {
       const p1Board = Promise.resolve(); phase1tick();
-      createMoonGround(scene);
+      createGround(scene);
       const p1Ground = Promise.resolve(); phase1tick();
       const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
       const p1Figures = preloadModels().then(() => phase1tick());
       Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
+        scenePhasesReady = true;
         setPhase1Ready(true);
         setAllPhasesReady(true);
       });
@@ -274,6 +302,7 @@ export default function BattleChess3D() {
             scene.add(m); PM[`${r},${f}`] = m;
           }
         }
+      refreshRaycastTargets();
     }
 
     const particles = [];
@@ -318,6 +347,11 @@ export default function BattleChess3D() {
 
     // Pre-flatten for clearHL performance (avoid .flat() per call)
     const flatSqMeshes = sqMeshes.flat();
+    const raycastTargets = [...flatSqMeshes];
+    function refreshRaycastTargets() {
+      raycastTargets.length = flatSqMeshes.length;
+      Object.values(PM).forEach(m => raycastTargets.push(m));
+    }
 
     function clearHL() {
       flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
@@ -498,6 +532,7 @@ export default function BattleChess3D() {
       };
       const finish = () => {
         gsRef.current = { ...ngs, sel: null, lm: [] }; animatingRef.current = false;
+        refreshRaycastTargets();
         const chkC = (ngs.status === "check" || ngs.status === "checkmate") ? ngs.turn : null;
         if (chkC) AudioEngine.check();
         showHL(null, [], ngs.last, chkC, ngs.board);
@@ -612,9 +647,8 @@ export default function BattleChess3D() {
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; mv2.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       // Pre-cached flat array of square meshes for raycasting (avoid spread alloc per click)
-      const flatSquares = sqMeshes.flat();
       ray.setFromCamera(mv2, camera);
-      const hits = ray.intersectObjects(flatSquares.concat(Object.values(PM)), true);
+      const hits = ray.intersectObjects(raycastTargets, true);
       const sq = getSquareFromHit(hits); if (sq) handleClick(sq[0], sq[1]);
     };
 
@@ -623,11 +657,12 @@ export default function BattleChess3D() {
       const zoomAmount = e.deltaY > 0 ? 1.15 : 0.85;
       camState.current.targetDist = Math.max(5, Math.min(22, camState.current.targetDist * zoomAmount));
     };
+    const onContextMenu = (e) => e.preventDefault();
     renderer.domElement.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     renderer.domElement.addEventListener('wheel', onMouseWheel, { passive: false });
-    renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+    renderer.domElement.addEventListener('contextmenu', onContextMenu);
 
     // ── Touch controls (mobile orbit / pinch-zoom / tap) ────────
     let touchStartX = 0, touchStartY = 0, touchDidMove = false, lastPinchDist = 0;
@@ -670,9 +705,8 @@ export default function BattleChess3D() {
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
       mv2.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-      const flatSquaresT = sqMeshes.flat();
       ray.setFromCamera(mv2, camera);
-      const hits = ray.intersectObjects(flatSquaresT.concat(Object.values(PM)), true);
+      const hits = ray.intersectObjects(raycastTargets, true);
       const sq = getSquareFromHit(hits); if (sq) handleClick(sq[0], sq[1]);
     };
     renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: false });
@@ -830,18 +864,14 @@ export default function BattleChess3D() {
       if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
     };
 
-    // Mobile: cap at 30fps to save GPU/battery
-    const mobileFrameDuration = 1000 / 30;
+    const frameDuration = 1000 / graphics.fps;
     let lastFrameTime = 0;
 
     const animate = (time) => {
       if (destroyed) return; requestAnimationFrame(animate);
 
-      // 30fps throttle on mobile
-      if (isMobile) {
-        if (time - lastFrameTime < mobileFrameDuration) return;
-        lastFrameTime = time;
-      }
+      if (time - lastFrameTime < frameDuration - 0.5) return;
+      lastFrameTime = time;
 
       // Slow orbit in menu only — full cycle 120 seconds
       if (!gameStartedRef.current) {
@@ -856,7 +886,10 @@ export default function BattleChess3D() {
       camState.current.dist += (camState.current.targetDist - camState.current.dist) * lerpFactor;
       updateCam();
 
-      if (galaxy && galaxy.tick) galaxy.tick(time);
+      // PERFORMANCE FIX #1: Only tick background if game is active or menu is visible
+      if (gameStartedRef.current || !scenePhasesReady) {
+        if (background && background.tick) background.tick(time);
+      }
 
       // Pulsing dark purple glow disc under selected piece
       if (selGlow.visible) {
@@ -888,6 +921,13 @@ export default function BattleChess3D() {
     onResize();
     return () => {
       destroyed = true; window.removeEventListener("resize", onResize); window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp);
+      renderer.domElement.removeEventListener("mousedown", onMouseDown);
+      renderer.domElement.removeEventListener("wheel", onMouseWheel);
+      renderer.domElement.removeEventListener("contextmenu", onContextMenu);
+      renderer.domElement.removeEventListener("touchstart", onTouchStart);
+      renderer.domElement.removeEventListener("touchmove", onTouchMove);
+      renderer.domElement.removeEventListener("touchend", onTouchEnd);
+      renderer.dispose();
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
   }, [setModeFixed, setDiffFixed]);
