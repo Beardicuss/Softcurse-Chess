@@ -16,6 +16,7 @@ import * as OnlineEngine from "./onlineEngine.js";
 import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 import { getElo, updateElo } from './eloSystem.js';
 import { createProceduralBoard } from './chessBoard.js';
+import { createMoonGround } from "./moonGround.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  ORCHESTRATOR COMPONENT
@@ -101,7 +102,8 @@ export default function BattleChess3D() {
     const _lastCamPos = new THREE.Vector3(); // dirty flag for updateAntiqueStoneMaterials
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(EW, EH);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const maxPixelRatio = isMobile ? 1.5 : 2;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
     renderer.shadowMap.enabled = !isMobile;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -226,7 +228,8 @@ export default function BattleChess3D() {
     // Delay heavy GLB loading until splash is done — avoids CPU/bandwidth competition
     const startLoading = () => {
       const p1Board = Promise.resolve(); phase1tick();
-      const p1Ground = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/ground.glb`, g => { addBoardModel(g); phase1tick(); res(); }, undefined, rej));
+      createMoonGround(scene);
+      const p1Ground = Promise.resolve(); phase1tick();
       const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
       const p1Figures = preloadModels().then(() => phase1tick());
       Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
