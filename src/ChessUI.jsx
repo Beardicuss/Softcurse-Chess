@@ -1063,11 +1063,11 @@ export default function ChessUI({
                                         <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
                                             <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.RESUME}</button>
                                             {mode !== "online" && (
-                                                <button className="menu-item" onClick={() => { window._battleChessReset?.(); setPaused(false); }}>⟳ RESTART</button>
+                                                <button className="menu-item" onClick={() => { window._battleChessAbandonMatch?.(); window._battleChessReset?.(); setPaused(false); }}>⟳ RESTART</button>
                                             )}
                                             <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
-                                            <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
-                                            <button className="menu-item" onClick={() => forceExit()}>⏏ {t.EXIT}</button>
+                                            <button className="menu-item" onClick={() => { window._battleChessAbandonMatch?.(); window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
+                                            <button className="menu-item" onClick={() => { window._battleChessAbandonMatch?.(); forceExit(); }}>⏏ {t.EXIT}</button>
                                         </div>
                                     </>
                                 ) : (

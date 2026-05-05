@@ -696,7 +696,7 @@ export default function BattleChess3D() {
             setMoveLog(ml => { const n = [...ml]; n[n.length - 1] = upd; return n; });
           } else setMoveLog(ml => [...ml, { w: "—", b: note }]);
         }
-        if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(ngs));
+        if (modeRef.current === "pvp") localStorage.setItem("battleChessSave", JSON.stringify(ngs));
         // Online PvP: send move to opponent
         if (modeRef.current === "online" && onlineRef.current && piece.c === playerSideRef.current) {
           OnlineEngine.sendMove(fr, ff, tr, tf, isPawnPromo ? chosenPromo : "Q");
@@ -967,7 +967,7 @@ export default function BattleChess3D() {
         const saved = localStorage.getItem("battleChessSave");
         if (saved) {
           try {
-            const sgs = JSON.parse(saved); gsRef.current = sgs; modeRef.current = "ai"; setModeFixed("ai");
+            const sgs = JSON.parse(saved); gsRef.current = sgs; modeRef.current = "pvp"; setModeFixed("pvp");
             spawnAll(gsRef.current.board); clearHL(); setMsg(statusMsg(sgs, sgs.turn === W ? B : W)); setCaps({ w: sgs.capW, b: sgs.capB });
             // If it's the AI's turn on load, kick off the AI
             if (sgs.turn !== playerSideRef.current && (sgs.status === "playing" || sgs.status === "check")) {
@@ -1002,6 +1002,14 @@ export default function BattleChess3D() {
       }
     };
 
+    window._battleChessAbandonMatch = () => {
+      if (modeRef.current === "ai" && gsRef.current && gsRef.current.status === "playing") {
+        updateElo("loss", diffRef.current);
+        gsRef.current.status = "abandoned";
+        setEloStats(getElo());
+      }
+    };
+
     window._battleChessExitToMenu = () => {
       if (onlineRematchInterval.current) { clearInterval(onlineRematchInterval.current); onlineRematchInterval.current = null; }
       setOnlineRematchState("none"); setOnlineRematchTime(0);
@@ -1009,6 +1017,12 @@ export default function BattleChess3D() {
       try { screen.orientation?.unlock?.(); } catch (e) { }
       if (modeRef.current === "online") OnlineEngine.disconnect();
     };
+
+    const handleBeforeUnload = () => {
+      window._battleChessAbandonMatch?.();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     window._battleChessUndo = () => {
       if (animatingRef.current || historyRef.current.length === 0) return;
 
@@ -1035,7 +1049,7 @@ export default function BattleChess3D() {
         undoOnce();
       }
 
-      if (modeRef.current === "ai") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
+      if (modeRef.current === "pvp") localStorage.setItem("battleChessSave", JSON.stringify(gsRef.current));
     };
 
     const frameDuration = 1000 / graphics.fps;
@@ -1095,6 +1109,7 @@ export default function BattleChess3D() {
     onResize();
     return () => {
       destroyed = true; window.removeEventListener("resize", onResize); window.removeEventListener("mousemove", onMouseMove); window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
       renderer.domElement.removeEventListener("wheel", onMouseWheel);
       renderer.domElement.removeEventListener("contextmenu", onContextMenu);
