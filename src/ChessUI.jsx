@@ -773,7 +773,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                             }}
                             onClick={() => {
                                 if (p === "continue") { onStart(null); }
-                                else if (p === "exit") { window.close(); }
+                                else if (p === "exit") { forceExit(); }
                                 else setPanel(p);
                             }}
                         >
@@ -988,7 +988,7 @@ export default function ChessUI({
                                             )}
                                             <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
                                             <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
-                                            <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
+                                            <button className="menu-item" onClick={() => forceExit()}>⏏ {t.EXIT}</button>
                                         </div>
                                     </>
                                 ) : (

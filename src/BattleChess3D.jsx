@@ -794,7 +794,7 @@ export default function BattleChess3D() {
       const dx = e.clientX - dsx, dy = e.clientY - dsy;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove = true;
       camState.current.targetTheta -= dx * 0.005; // Slightly slower, friendlier pan
-      camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi - dy * 0.005));
+      camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi + dy * 0.005));
       dsx = e.clientX; dsy = e.clientY;
     };
     const onMouseUp = (e) => {
@@ -842,7 +842,7 @@ export default function BattleChess3D() {
         const dy = e.touches[0].clientY - touchStartY;
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touchDidMove = true;
         camState.current.targetTheta -= dx * 0.005;
-        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi - dy * 0.005));
+        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi + dy * 0.005));
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
       } else if (e.touches.length === 2) {
