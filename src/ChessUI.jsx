@@ -239,6 +239,8 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             onStart({ mode: "pvp", diff: null });
         } else if (m === "ai_vs_ai") {
             onStart({ mode: "ai_vs_ai", diff: "GRANDMASTER" });
+        } else if (m === "online_lobby") {
+            setStep("lobby");
         } else if (m === "online_create") {
             handleCreateRoom();
         } else if (m === "online_join") {
@@ -256,9 +258,12 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             const code = await createRoom();
             setRoomCode(code);
             setOnlineStatus(t.WAITING_OPP);
-            on("assigned", (s) => {
-                assignedSideRef.current = s; // ✅ FIX: Store in ref immediately
-                setSide(s); // Still update state for UI
+            on("assigned", (s, history, isStarted) => {
+                assignedSideRef.current = s;
+                setSide(s);
+                if (isStarted) {
+                    onStart({ mode: "online", diff: null, side: s, moveHistory: history });
+                }
             });
             on("start", () => {
                 onStart({ mode: "online", diff: null, side: assignedSideRef.current || side });
@@ -277,9 +282,12 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             const { joinRoom, on } = await import("./onlineEngine.js");
             const code = await joinRoom(joinInput);
             setRoomCode(code);
-            on("assigned", (s) => {
-                assignedSideRef.current = s; // ✅ FIX: Store in ref immediately
-                setSide(s); // Still update state for UI
+            on("assigned", (s, history, isStarted) => {
+                assignedSideRef.current = s;
+                setSide(s);
+                if (isStarted) {
+                    onStart({ mode: "online", diff: null, side: s, moveHistory: history });
+                }
             });
             on("start", () => {
                 onStart({ mode: "online", diff: null, side: assignedSideRef.current || side });
@@ -291,6 +299,36 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
             console.error(e);
         }
     };
+
+    const handleJoinNamedRoom = async (name) => {
+        setOnlineStatus(`JOINING ${name}...`);
+        setRoomCode(name);
+        setStep("waiting");
+        try {
+            const { joinRoom, on } = await import("./onlineEngine.js");
+            const code = await joinRoom(name);
+            on("assigned", (s, history, isStarted) => {
+                assignedSideRef.current = s;
+                setSide(s);
+                if (isStarted) {
+                    onStart({ mode: "online", diff: null, side: s, moveHistory: history });
+                }
+            });
+            on("start", () => {
+                onStart({ mode: "online", diff: null, side: assignedSideRef.current || side });
+            });
+            setOnlineStatus(t.CONNECTED);
+        } catch (e) {
+            setOnlineStatus(t.FAILED_JOIN);
+            setStep("lobby");
+            console.error(e);
+        }
+    };
+
+    const MYTH_ROOMS = [
+        "TARTARUS", "VALHALLA", "OLYMPUS", "ELYSIUM", "ASGARD",
+        "AALU", "NIFLHEIM", "AVALON", "HELIOPOLIS", "KUR"
+    ];
 
     return (
         <div className="sub-panel" style={{ width: "100%" }}>
@@ -307,13 +345,9 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         <span className="menu-icon">⚔</span>
                         {t.LOCAL_PVP}
                     </button>
-                    <button className="menu-item" onClick={() => handleModeSelect("online_create")}>
+                    <button className="menu-item" onClick={() => handleModeSelect("online_lobby")}>
                         <span className="menu-icon">🌐</span>
-                        {t.ONLINE_PVP}
-                    </button>
-                    <button className="menu-item" onClick={() => handleModeSelect("online_join")}>
-                        <span className="menu-icon">🔗</span>
-                        {t.JOIN_GAME}
+                        {t.ONLINE_PVP || "ONLINE LOBBY"}
                     </button>
                     <button className="menu-item" onClick={() => handleModeSelect("ai_vs_ai")}>
                         <span className="menu-icon">📽</span>
@@ -321,6 +355,51 @@ function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                     </button>
                     <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
                     <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                        <span className="menu-icon">←</span>
+                        {t.BACK}
+                    </button>
+                </>
+            )}
+
+            {step === "lobby" && (
+                <>
+                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                        {t.ONLINE_PVP || "ONLINE LOBBY"}
+                    </div>
+
+                    {/* Private room section pinned to top */}
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "20px", width: "100%" }}>
+                        <button
+                            className="menu-item"
+                            style={{ fontSize: "12px", flex: 1, padding: "12px", margin: 0, justifyContent: "center", letterSpacing: "1px" }}
+                            onClick={() => handleModeSelect("online_create")}>
+                            ➕ PRIVATE
+                        </button>
+                        <button
+                            className="menu-item"
+                            style={{ fontSize: "12px", flex: 1, padding: "12px", margin: 0, justifyContent: "center", letterSpacing: "1px" }}
+                            onClick={() => handleModeSelect("online_join")}>
+                            🔗 JOIN
+                        </button>
+                    </div>
+
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "0 0 16px 0", width: "100%" }} />
+
+                    {/* Public Mythology Rooms Scrollable List */}
+                    <div style={{ maxHeight: "35vh", overflowY: "auto", paddingRight: "4px", width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {MYTH_ROOMS.map(r => (
+                            <button
+                                key={r}
+                                className="menu-item"
+                                style={{ fontSize: "14px", padding: "12px 18px", margin: 0 }}
+                                onClick={() => handleJoinNamedRoom(r)}>
+                                <span className="menu-icon" style={{ opacity: 0.5 }}>🏛</span> {r} <span style={{ marginLeft: "auto", fontSize: "10px", opacity: 0.4 }}>PUBLIC</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>

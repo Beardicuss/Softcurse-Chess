@@ -57,25 +57,37 @@ export class GameRoom {
             return new Response("Expected WebSocket", { status: 426 });
         }
 
-        if (this.sessions.length >= 2) {
+        if (this.sessions.length >= 4) {
             return new Response("Room full", { status: 409 });
         }
 
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair);
 
-        const side = this.sessions.length === 0 ? "w" : "b";
+        let side;
+        if (!this.sessions.some(s => s.side === "w")) side = "w";
+        else if (!this.sessions.some(s => s.side === "b")) side = "b";
+        else side = "s"; // Spectator
+
         const session = { ws: server, side, msgCount: 0, windowStart: Date.now() };
         this.sessions.push(session);
 
         server.accept();
         this.resetIdleTimer();
 
-        // Tell this player their assigned side
-        server.send(JSON.stringify({ type: "assigned", side }));
+        // Tell this player their assigned side and relay the mid-game state if they are a spectator joining later
+        server.send(JSON.stringify({
+            type: "assigned",
+            side,
+            moveHistory: this.moveHistory,
+            gameStarted: this.gameStarted,
+            currentTurn: this.currentTurn
+        }));
 
         // If both players are here, start the game
-        if (this.sessions.length === 2) {
+        const hasW = this.sessions.some(s => s.side === "w");
+        const hasB = this.sessions.some(s => s.side === "b");
+        if (hasW && hasB && !this.gameStarted) {
             this.gameStarted = true;
             this.broadcast({ type: "start", turn: "w" });
         }
@@ -105,13 +117,18 @@ export class GameRoom {
 
         server.addEventListener("close", () => {
             this.sessions = this.sessions.filter((s) => s !== session);
-            this.broadcast({ type: "opponent_left" });
-            this.gameStarted = false;
+            if (session.side === "w" || session.side === "b") {
+                this.broadcast({ type: "opponent_left" });
+                this.gameStarted = false;
+            }
         });
 
         server.addEventListener("error", () => {
             this.sessions = this.sessions.filter((s) => s !== session);
-            this.broadcast({ type: "opponent_left" });
+            if (session.side === "w" || session.side === "b") {
+                this.broadcast({ type: "opponent_left" });
+                this.gameStarted = false;
+            }
         });
 
         return new Response(null, { status: 101, webSocket: client });

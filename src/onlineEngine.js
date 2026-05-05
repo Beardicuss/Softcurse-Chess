@@ -34,7 +34,7 @@ function connectWS(roomId) {
                 const msg = JSON.parse(event.data);
                 switch (msg.type) {
                     case "assigned":
-                        callbacks.onAssigned?.(msg.side);
+                        callbacks.onAssigned?.(msg.side, msg.moveHistory, msg.gameStarted);
                         break;
                     case "start":
                         callbacks.onStart?.();

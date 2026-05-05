@@ -895,7 +895,24 @@ export default function BattleChess3D() {
           }
         }
         window._battleChessReset?.();
-        if (modeRef.current === "ai" && playerSideRef.current === B) doAITurn();
+
+        // Fast-forward mid-game sync (Spectators)
+        if (cfg.moveHistory && cfg.moveHistory.length > 0) {
+          let state = gsRef.current;
+          const newLog = [];
+          for (let m of cfg.moveHistory) {
+            state = doMove(state, m.fr, m.ff, m.tr, m.tf, m.promo || "Q");
+            newLog.push(state.last.note);
+          }
+          gsRef.current = state;
+          spawnAll(state.board);
+          setMoveLog(newLog);
+          setMoveCount(newLog.length);
+          setMsg(state.status === "playing" ? (state.turn === "w" ? "TURN_W" : "TURN_B") : (state.turn === "w" ? "MATE_B" : "MATE_W"));
+          setCaps({ w: state.capW, b: state.capB });
+        } else if (modeRef.current === "ai" && playerSideRef.current === B) {
+          doAITurn();
+        }
         // AI vs AI spectator loop
         if (modeRef.current === "ai_vs_ai") {
           const spectatorLoop = async () => {
