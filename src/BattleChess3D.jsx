@@ -360,6 +360,97 @@ export default function BattleChess3D() {
       };
     }
 
+    function mkShatter(victim, isWhite) {
+      const N = 30; // Increased count for crumble effect
+      const geo = new THREE.TetrahedronGeometry(0.18, 0);
+      let mat;
+      victim.traverse(c => {
+        if (c.isMesh && c.material && !mat) {
+          mat = Array.isArray(c.material) ? c.material[0] : c.material;
+        }
+      });
+      // Fallback base color if material extraction fails
+      const baseColor = isWhite ? 0xdddddd : 0x060d18;
+      if (!mat) mat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.9 });
+
+      const inst = new THREE.InstancedMesh(geo, mat, N);
+      inst.castShadow = true;
+      const dummy = new THREE.Object3D();
+      const vels = []; const rots = []; const baseScales = [];
+      const wPos = victim.position.clone();
+
+      for (let i = 0; i < N; i++) {
+        const x = (Math.random() - 0.5) * 0.8;
+        const y = Math.random() * 2.0;
+        const z = (Math.random() - 0.5) * 0.8;
+
+        dummy.position.set(wPos.x + x, wPos.y + y, wPos.z + z);
+        dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+        let scale;
+        if (i < 2) scale = 1.3 + Math.random() * 0.5;
+        else if (i < 9) scale = 0.6 + Math.random() * 0.4;
+        else scale = 0.2 + Math.random() * 0.3;
+
+        baseScales.push(scale);
+        dummy.scale.setScalar(scale);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+
+        // Weak collapse — zero pop, practically falling straight down
+        const vx = x * 0.5 + (Math.random() - 0.5) * 0.5;
+        const vy = (Math.random() - 0.5) * 0.2; // no upward hop at all
+        const vz = z * 0.5 + (Math.random() - 0.5) * 0.5;
+        vels.push(new THREE.Vector3(vx, vy, vz));
+        rots.push(new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2));
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      scene.add(inst);
+
+      let life = 0;
+      return () => {
+        life += 0.016;
+
+        let moving = false;
+        for (let i = 0; i < N; i++) {
+          inst.getMatrixAt(i, dummy.matrix);
+          dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+
+          // Shrink over 2 seconds
+          if (life > 1.0) {
+            moving = true;
+            const shrinkP = Math.max(0, 1 - (life - 1.0) / 1.0); // complete fade by t=2.0
+            dummy.scale.setScalar(baseScales[i] * shrinkP);
+          }
+
+          if (dummy.position.y > BOARD_Y + 0.05 || Math.abs(vels[i].y) > 0.1 || Math.abs(vels[i].x) > 0.1) {
+            moving = true;
+            vels[i].y -= 30 * 0.016; // gravity pulls them down immediately
+            dummy.position.addScaledVector(vels[i], 0.016);
+
+            if (dummy.position.y < BOARD_Y + 0.02) {
+              dummy.position.y = BOARD_Y + 0.02;
+              vels[i].y *= -0.2; // weak bounce
+              vels[i].x *= 0.4;  // stop quickly
+              vels[i].z *= 0.4;
+              rots[i].multiplyScalar(0.4);
+            }
+            dummy.rotation.x += rots[i].x;
+            dummy.rotation.y += rots[i].y;
+            dummy.rotation.z += rots[i].z;
+          }
+
+          dummy.updateMatrix();
+          inst.setMatrixAt(i, dummy.matrix);
+        }
+
+        if (moving || life < 1.0) inst.instanceMatrix.needsUpdate = true;
+        // Delete sequence exactly at 2.0 seconds
+        if (life >= 2.0) { scene.remove(inst); geo.dispose(); return false; }
+        return true;
+      };
+    }
+
     // Glowing dark purple selection disc
     const selGlowMat = new THREE.MeshBasicMaterial({
       color: 0x0a4b66, transparent: true, opacity: 0,
@@ -427,16 +518,50 @@ export default function BattleChess3D() {
 
     function battleAnim(attacker, victim, target, col, cb) {
       const start = attacker.position.clone();
+      const vicStartPos = victim.position.clone();
+
       let elapsed = 0; animatingRef.current = true;
+      let shattered = false;
+      const duration = 0.55;
+
       const step = () => {
-        elapsed += 0.016; const t = Math.min(elapsed / 0.45, 1);
-        const ease = 1 - Math.pow(1 - t, 3);
-        attacker.position.lerpVectors(start, target, ease);
-        if (t >= 0.7 && victim.parent) {
-          particles.push(mkBurst(victim.position, col));
+        elapsed += 0.016; const t = Math.min(elapsed / duration, 1);
+
+        // Attacker leaps: Horizontal ease in-out
+        const easeH = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        attacker.position.lerpVectors(start, target, easeH);
+
+        // Vertical arc jump
+        const jumpHeight = 3.0; // High aggressive leap
+        const arcT = Math.sin(t * Math.PI);
+        attacker.position.y += (arcT * jumpHeight);
+
+        // Smash impact!
+        if (t >= 0.85 && !shattered && victim.parent) {
+          shattered = true;
+          const isWhite = victim.userData?.color === W;
+          const dustColor = isWhite ? 0xdddddd : 0x060d18; // Use exact figure colors, not game accent colors
+
+          // Explode the victim into physical 3D rocks using their own material!
+          particles.push(mkShatter(victim, isWhite));
+          // Add a dust cloud matching the stone color
+          particles.push(mkBurst(vicStartPos, dustColor, 0.08, 60));
+
           scene.remove(victim);
+
+          // Camera punch/shake
+          camState.current.theta += (Math.random() - 0.5) * 0.08;
+          camState.current.phi += (Math.random() - 0.5) * 0.08;
         }
-        if (t < 1) requestAnimationFrame(step); else { animatingRef.current = false; cb?.(); }
+
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          // Snap exactly to target square on landing
+          attacker.position.copy(target);
+          animatingRef.current = false;
+          cb?.();
+        }
       };
       step();
     }
@@ -645,9 +770,15 @@ export default function BattleChess3D() {
     const ray = new THREE.Raycaster(); const mv2 = new THREE.Vector2();
     function getSquareFromHit(hits) {
       if (!hits.length) return null;
-      // Filter hits to prioritize squares then pieces
-      const sqHit = hits.find(h => h.object.userData.r !== undefined);
-      if (sqHit) return [sqHit.object.userData.r, sqHit.object.userData.f];
+      for (const h of hits) {
+        let obj = h.object;
+        while (obj && obj !== scene) {
+          if (obj.userData && obj.userData.r !== undefined) {
+            return [obj.userData.r, obj.userData.f];
+          }
+          obj = obj.parent;
+        }
+      }
       return null;
     }
 
