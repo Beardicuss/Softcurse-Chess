@@ -799,7 +799,7 @@ export default function BattleChess3D() {
     };
     const onMouseUp = (e) => {
       isDrag = false;
-      if (didMove) return;
+      if (!gameStartedRef.current || didMove) return;
       if (e.button !== 0) return;
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; mv2.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -857,7 +857,7 @@ export default function BattleChess3D() {
       }
     };
     const onTouchEnd = (e) => {
-      if (touchDidMove || e.changedTouches.length !== 1) return;
+      if (!gameStartedRef.current || touchDidMove || e.changedTouches.length !== 1) return;
       const touch = e.changedTouches[0];
       const rect = renderer.domElement.getBoundingClientRect();
       mv2.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
