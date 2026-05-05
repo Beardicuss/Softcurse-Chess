@@ -686,7 +686,8 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
             onTouchEnd={handleTouchEnd}
             style={{
                 position: "absolute", inset: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
+                display: "flex", flexDirection: "column",
+                overflowY: "auto", overflowX: "hidden",
                 zIndex: 50,
                 background: "radial-gradient(ellipse at center, rgba(5,1,10,0.7) 0%, rgba(5,1,10,0.92) 100%)",
                 backdropFilter: "blur(3px)",
@@ -695,6 +696,8 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
             <div style={{
                 position: "relative",
                 width: "min(440px, 90vw)",
+                margin: "auto",
+                padding: "clamp(20px, 5vh, 60px) 0",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -878,7 +881,7 @@ export default function ChessUI({
 
     return (
         <div style={{
-            width: "100%", height: "100vh",
+            width: "100%", height: "100dvh",
             background: "#05010a",
             fontFamily: "'Cinzel', serif",
             position: "relative", overflow: "hidden",
@@ -970,25 +973,28 @@ export default function ChessUI({
                         <div style={{
                             position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
                             background: "rgba(5,1,10,0.85)", backdropFilter: "blur(4px)",
-                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            display: "flex", flexDirection: "column",
+                            overflowY: "auto", overflowX: "hidden",
                             zIndex: 100,
                         }}>
-                            {pausePanel === "main" ? (
-                                <>
-                                    <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)" }}>{t.PAUSED}</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
-                                        <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.RESUME}</button>
-                                        {mode !== "online" && (
-                                            <button className="menu-item" onClick={() => { window._battleChessReset?.(); setPaused(false); }}>⟳ RESTART</button>
-                                        )}
-                                        <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
-                                        <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
-                                        <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <SettingsPanel onBack={() => setPausePanel("main")} />
-                            )}
+                            <div style={{ margin: "auto", padding: "clamp(20px, 5vh, 60px) 0", display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+                                {pausePanel === "main" ? (
+                                    <>
+                                        <div style={{ color: "#c5a059", fontSize: "clamp(22px, 5vw, 32px)", letterSpacing: "clamp(4px, 1vw, 8px)", fontFamily: "'Cinzel Decorative', serif", marginBottom: "clamp(20px, 5vw, 40px)", textShadow: "0 0 20px rgba(197,160,89,0.5)", textAlign: "center" }}>{t.PAUSED}</div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 15, width: "min(260px, 80vw)" }}>
+                                            <button className="menu-item" onClick={() => setPaused(false)}>▶ {t.RESUME}</button>
+                                            {mode !== "online" && (
+                                                <button className="menu-item" onClick={() => { window._battleChessReset?.(); setPaused(false); }}>⟳ RESTART</button>
+                                            )}
+                                            <button className="menu-item" onClick={() => setPausePanel("settings")}>⚙ {t.SETTINGS}</button>
+                                            <button className="menu-item" onClick={() => { window._battleChessExitToMenu?.(); setPaused(false); }}>⧉ {t.MAIN_MENU}</button>
+                                            <button className="menu-item" onClick={() => window.close()}>⏏ {t.EXIT}</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <SettingsPanel onBack={() => setPausePanel("main")} />
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -1150,16 +1156,18 @@ export default function ChessUI({
 
                     {/* Promotion modal */}
                     {promoModal && (
-                        <div style={{ position: "absolute", inset: 0, background: "rgba(5,1,10,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-                            <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid #c5a059", padding: 30, textAlign: "center" }}>
-                                <div style={{ color: "#c5a059", fontSize: "18px", letterSpacing: "4px", marginBottom: 25, fontFamily: "'Cinzel Decorative', serif" }}>{t.PAWN_PROMO}</div>
-                                <div style={{ display: "flex", gap: 15 }}>
-                                    {PROMO_OPTS.map(o => (
-                                        <button key={o.t} onClick={() => window._battleChessPromoChoice?.(o.t)} style={{ background: "rgba(197,160,89,.1)", border: "1px solid rgba(197,160,89,.3)", color: "#c5a059", padding: "15px 20px", cursor: "pointer", transition: "all .2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,.25)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,.1)"}>
-                                            <div style={{ fontSize: 32, marginBottom: 5 }}>{o.sym[promoModal.color === W ? 0 : 1]}</div>
-                                            <div style={{ fontSize: 10, letterSpacing: 2 }}>{o.label}</div>
-                                        </button>
-                                    ))}
+                        <div style={{ position: "absolute", inset: 0, background: "rgba(5,1,10,.8)", display: "flex", flexDirection: "column", overflowY: "auto", zIndex: 200 }}>
+                            <div style={{ margin: "auto", padding: "20px", display: "flex", justifyContent: "center" }}>
+                                <div style={{ background: "rgba(5,1,10,.95)", border: "1px solid #c5a059", padding: "clamp(20px, 4vw, 30px)", textAlign: "center", maxWidth: "95vw" }}>
+                                    <div style={{ color: "#c5a059", fontSize: "clamp(14px, 3vw, 18px)", letterSpacing: "4px", marginBottom: 25, fontFamily: "'Cinzel Decorative', serif" }}>{t.PAWN_PROMO}</div>
+                                    <div style={{ display: "flex", gap: "clamp(8px, 1.5vw, 15px)", flexWrap: "wrap", justifyContent: "center" }}>
+                                        {PROMO_OPTS.map(o => (
+                                            <button key={o.t} onClick={() => window._battleChessPromoChoice?.(o.t)} style={{ background: "rgba(197,160,89,.1)", border: "1px solid rgba(197,160,89,.3)", color: "#c5a059", padding: "clamp(10px, 2vw, 15px) clamp(12px, 3vw, 20px)", cursor: "pointer", transition: "all .2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,.25)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,.1)"}>
+                                                <div style={{ fontSize: "clamp(24px, 5vw, 32px)", marginBottom: 5 }}>{o.sym[promoModal.color === W ? 0 : 1]}</div>
+                                                <div style={{ fontSize: "clamp(8px, 1.5vw, 10px)", letterSpacing: 2 }}>{o.label}</div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

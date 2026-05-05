@@ -267,7 +267,7 @@ export default function SplashScreen({ onComplete, logoSrc = "/intro/logo.png" }
         position: "fixed",
         inset: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         zIndex: 9999,
         display: "block",
         background: "#020509",

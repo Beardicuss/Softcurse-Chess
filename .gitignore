@@ -9,8 +9,6 @@ node_modules/
 dist/
 
 # Large media assets (use Git LFS or host externally)
-public/intro/flash_screen.mp4
-*.glb
 .wrangler/
 
 # Environment & secrets

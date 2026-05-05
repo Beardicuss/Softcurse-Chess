@@ -2,20 +2,24 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 
 // ── Module imports ──────────────────────────────────────────────
 import { W, B, initGame, findKing, legalMoves, doMove } from "./chessEngine.js";
 import { getNeuralMove } from "./aiEngine.js";
 import { makePiece, preloadModels } from "./pieceFactory.js";
 import { AudioEngine } from "./audioEngine.js";
-import { SZ, OFF, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
+import { SZ, OFF, BOARD_Y, toWorld, DARK_SQ, LIGHT_SQ, THEME, ASSET_CDN } from "./constants.js";
 import ChessUI from "./ChessUI.jsx";
 import { createBackground } from "./background.js";
 import * as OnlineEngine from "./onlineEngine.js";
 import { updateAntiqueStoneMaterials } from './antiqueStoneMaterial.js';
 import { getElo, updateElo } from './eloSystem.js';
-import { createProceduralBoard } from './chessBoard.js';
+import { createProceduralBoard, loadBasementModel } from './chessBoard.js';
 import { createGround } from "./ground.js";
 
 const GRAPHICS_PRESETS = {
@@ -87,10 +91,10 @@ export default function BattleChess3D() {
   const camState = useRef({
     theta: 0.3,
     phi: 0.55,
-    dist: 11.5,
+    dist: 14.5,
     targetTheta: 0.3,
     targetPhi: 0.55,
-    targetDist: 11.5,
+    targetDist: 14.5,
   });
 
   const setModeFixed = useCallback((m) => {
@@ -133,7 +137,7 @@ export default function BattleChess3D() {
     renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.5;
+    renderer.toneMappingExposure = 1.1; // Reduced from 1.5 - stops washing out greys to white
     el.appendChild(renderer.domElement);
 
     // ── WebGL context loss recovery ────────────────────────────
@@ -206,11 +210,12 @@ export default function BattleChess3D() {
     scene.add(boardGrp);
     const gltfLoader = new GLTFLoader();
     gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+    gltfLoader.setDRACOLoader(dracoLoader);
 
-    function addBoardModel(gltf, preserveMaterials = false) {
+    function addBoardModel(gltf, preserveMaterials = false, customScale = 0.45) {
       const model = gltf.scene;
       model.position.set(0, -0.25, 0);
-      model.scale.setScalar(0.45);
+      model.scale.setScalar(customScale);
       model.traverse(node => {
         if (node.isMesh) {
           node.geometry.computeBoundingSphere();
@@ -244,12 +249,13 @@ export default function BattleChess3D() {
     }
 
     // Phase 1: board + ground + figures + walls
-    const phase1Total = 4;
+    const phase1Total = 5;
     let phase1Loaded = 0;
     let scenePhasesReady = false;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
 
     const boardGroup = createProceduralBoard(scene);
+    boardGroup.position.y = BOARD_Y;
     scene.add(boardGroup);
 
     // Delay heavy GLB loading until splash is done — avoids CPU/bandwidth competition
@@ -257,9 +263,28 @@ export default function BattleChess3D() {
       const p1Board = Promise.resolve(); phase1tick();
       createGround(scene);
       const p1Ground = Promise.resolve(); phase1tick();
-      const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => { addBoardModel(g, true); phase1tick(); res(); }, undefined, rej));
+      const p1Walls = new Promise((res, rej) => gltfLoader.load(`${ASSET_CDN}/walls.glb`, g => {
+        addBoardModel(g, true, 0.67);
+        // traverse boardGrp — последний добавленный child это walls
+        const wallsModel = boardGrp.children[boardGrp.children.length - 1];
+        wallsModel.traverse(node => {
+          if (!node.isMesh) return;
+          const mats = Array.isArray(node.material) ? node.material : [node.material];
+          mats.forEach(m => {
+            // Match basement color #656F6B (0.39, 0.43, 0.41) but darkened for bg
+            m.color.setRGB(0.16, 0.18, 0.17);
+            m.roughness = 0.95;
+            m.metalness = 0.00;
+            if (m.emissive) m.emissive.setHex(0x000000);
+            m.needsUpdate = true;
+          });
+        });
+        phase1tick();
+        res();
+      }, undefined, rej));
+      const p1Basement = loadBasementModel(scene).then(() => phase1tick());
       const p1Figures = preloadModels().then(() => phase1tick());
-      Promise.all([p1Board, p1Ground, p1Walls, p1Figures]).then(() => {
+      Promise.all([p1Board, p1Ground, p1Walls, p1Basement, p1Figures]).then(() => {
         scenePhasesReady = true;
         setPhase1Ready(true);
         setAllPhasesReady(true);
@@ -276,7 +301,7 @@ export default function BattleChess3D() {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(SZ, SZ), mat);
         const pos = toWorld(r, f);
         m.rotation.x = -Math.PI / 2;
-        m.position.set(pos.x, 0.015, pos.z);
+        m.position.set(pos.x, pos.y + 0.015, pos.z);
         m.userData = { r, f, mat };
         boardGrp.add(m);
         sqMeshes[r][f] = m;
@@ -286,6 +311,7 @@ export default function BattleChess3D() {
     const PM = {};
     function spawnAll(board) {
       Object.values(PM).forEach(m => {
+        if (!m) return;
         scene.remove(m);
         m.traverse(child => { if (child.isMesh) { child.geometry?.dispose(); } });
       });
@@ -296,7 +322,7 @@ export default function BattleChess3D() {
           if (p) {
             const m = makePiece(p.t, p.c);
             const pos = toWorld(r, f);
-            m.position.set(pos.x, 0.0, pos.z);
+            m.position.set(pos.x, pos.y, pos.z);
             if (p.c === W) m.rotation.y = Math.PI;
             m.userData = { ...m.userData, r, f };
             scene.add(m); PM[`${r},${f}`] = m;
@@ -336,8 +362,8 @@ export default function BattleChess3D() {
 
     // Glowing dark purple selection disc
     const selGlowMat = new THREE.MeshBasicMaterial({
-      color: 0x341539, transparent: true, opacity: 0,
-      side: THREE.DoubleSide, depthWrite: false,
+      color: 0x0a4b66, transparent: true, opacity: 0,
+      side: THREE.DoubleSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
     });
     const selGlow = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), selGlowMat);
     selGlow.rotation.x = -Math.PI / 2;
@@ -366,10 +392,10 @@ export default function BattleChess3D() {
         const [r, f] = sel;
 
         // Ensure pulse disc is active beneath the piece ONLY (no flat square shading)
-        selGlowMat.color.setHex(0x341539);
-        selGlowMat.opacity = 0.7;
+        selGlowMat.color.setHex(0x0a4b66);
+        selGlowMat.opacity = 0.9;
         const sPos = toWorld(r, f);
-        selGlow.position.set(sPos.x, 0.025, sPos.z);
+        selGlow.position.set(sPos.x, sPos.y + 0.055, sPos.z);
         selGlow.visible = true;
       }
 
@@ -520,9 +546,9 @@ export default function BattleChess3D() {
         delete PM[fk];
         if (isPawnPromo) {
           scene.remove(movMesh); const newM = makePiece(chosenPromo, piece.c);
-          newM.position.set(tPos.x, 0.0, tPos.z); newM.userData = { type: chosenPromo, color: piece.c, r: tr, f: tf };
+          newM.position.set(tPos.x, tPos.y, tPos.z); newM.userData = { type: chosenPromo, color: piece.c, r: tr, f: tf };
           scene.add(newM); PM[tk] = newM;
-          particles.push(mkBurst({ x: tPos.x, y: 0.3, z: tPos.z }, piece.c === W ? THEME.whiteAccent : THEME.blackAccent, 0.1, 120));
+          particles.push(mkBurst({ x: tPos.x, y: tPos.y + 0.3, z: tPos.z }, piece.c === W ? THEME.whiteAccent : THEME.blackAccent, 0.1, 120));
         } else { PM[tk] = movMesh; movMesh.userData = { ...movMesh.userData, r: tr, f: tf }; }
         if (wasCastle) {
           const rkM = PM[castleRookFromKey];
@@ -580,7 +606,7 @@ export default function BattleChess3D() {
       };
       if (wasEP) {
         const epK = `${fr},${tf}`;
-        if (PM[epK]) { const ep = toWorld(fr, tf); particles.push(mkBurst({ x: ep.x, y: 0.3, z: ep.z }, THEME.whiteAccent)); scene.remove(PM[epK]); delete PM[epK]; }
+        if (PM[epK]) { const ep = toWorld(fr, tf); particles.push(mkBurst({ x: ep.x, y: ep.y + 0.3, z: ep.z }, THEME.whiteAccent)); scene.remove(PM[epK]); delete PM[epK]; }
       }
       if (!movMesh) { afterAnim(); return; } // piece mesh not yet loaded, skip animation
       if (capMesh && !wasEP) battleAnim(movMesh, capMesh, tPos, capMesh.userData.color === W ? THEME.whiteAccent : THEME.blackAccent, afterAnim);
@@ -611,9 +637,9 @@ export default function BattleChess3D() {
       const { theta, phi, dist } = camState.current;
       const pitchMod = gameStartedRef.current ? 0 : 0.2;
       camera.position.x = dist * Math.sin(theta) * Math.cos(phi + pitchMod);
-      camera.position.y = dist * Math.sin(phi + pitchMod);
+      camera.position.y = BOARD_Y + dist * Math.sin(phi + pitchMod);
       camera.position.z = dist * Math.cos(theta) * Math.cos(phi + pitchMod);
-      camera.lookAt(0, 0.5, 0);
+      camera.lookAt(0, BOARD_Y + 0.5, 0);
     }
 
     const ray = new THREE.Raycaster(); const mv2 = new THREE.Vector2();
@@ -636,8 +662,8 @@ export default function BattleChess3D() {
       if (!isDrag) return;
       const dx = e.clientX - dsx, dy = e.clientY - dsy;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove = true;
-      camState.current.targetTheta -= dx * 0.006;
-      camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.08, camState.current.targetPhi - dy * 0.006));
+      camState.current.targetTheta -= dx * 0.005; // Slightly slower, friendlier pan
+      camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi - dy * 0.005));
       dsx = e.clientX; dsy = e.clientY;
     };
     const onMouseUp = (e) => {
@@ -654,8 +680,8 @@ export default function BattleChess3D() {
 
     const onMouseWheel = (e) => {
       e.preventDefault();
-      const zoomAmount = e.deltaY > 0 ? 1.15 : 0.85;
-      camState.current.targetDist = Math.max(5, Math.min(22, camState.current.targetDist * zoomAmount));
+      const zoomAmount = e.deltaY > 0 ? 1.1 : 0.9; // Friendlier, smoother zoom steps
+      camState.current.targetDist = Math.max(3, Math.min(30, camState.current.targetDist * zoomAmount));
     };
     const onContextMenu = (e) => e.preventDefault();
     renderer.domElement.addEventListener("mousedown", onMouseDown);
@@ -684,8 +710,8 @@ export default function BattleChess3D() {
         const dx = e.touches[0].clientX - touchStartX;
         const dy = e.touches[0].clientY - touchStartY;
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touchDidMove = true;
-        camState.current.targetTheta -= dx * 0.006;
-        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.08, camState.current.targetPhi - dy * 0.006));
+        camState.current.targetTheta -= dx * 0.005;
+        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi - dy * 0.005));
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
       } else if (e.touches.length === 2) {
@@ -694,7 +720,7 @@ export default function BattleChess3D() {
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (lastPinchDist > 0) {
           const scale = lastPinchDist / dist;
-          camState.current.targetDist = Math.max(5, Math.min(22, camState.current.targetDist * scale));
+          camState.current.targetDist = Math.max(3, Math.min(30, camState.current.targetDist * scale));
         }
         lastPinchDist = dist;
       }
@@ -803,7 +829,7 @@ export default function BattleChess3D() {
         } else window._battleChessReset?.();
       }
       gameStartedRef.current = true; setGameStarted(true);
-      camState.current.targetDist = 11.5;
+      camState.current.targetDist = 14.5;
       // Orientation lock (landscape) — mobile only, silently fails on unsupported platforms
       try { screen.orientation?.lock?.('landscape').catch(() => { }); } catch (e) { }
     };
