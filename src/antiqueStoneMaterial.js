@@ -20,30 +20,37 @@ function createAntiqueStoneMaterial(style) {
     const isDemon = style === 'demon';
     const isNokron = style === 'nokron';
     const isAngel = style === 'angel';
+    const isNorthmen = style === 'northmen';
 
     return new THREE.ShaderMaterial({
         uniforms: {
             // ── Nokron palette: abyss blue → slate → cold frost ──────
             u_dark: {
                 value: isNokron
-                    ? new THREE.Color(0.025, 0.030, 0.035)  // DEEPENED SHADOWS for carvings
-                    : isDemon
-                        ? new THREE.Color(0.008, 0.012, 0.022)  // Matched to Dark Square
-                        : new THREE.Color(0.550, 0.600, 0.650)  // BRIGHTENED BASE for Angels
+                    ? new THREE.Color(0.025, 0.030, 0.035)
+                    : isNorthmen
+                        ? new THREE.Color(0.02, 0.03, 0.05)   // Deep iron shadow
+                        : isDemon
+                            ? new THREE.Color(0.008, 0.012, 0.022)
+                            : new THREE.Color(0.550, 0.600, 0.650)
             },
             u_mid: {
                 value: isNokron
-                    ? new THREE.Color(0.396, 0.435, 0.420)  // exactly RGB(101, 111, 107)
-                    : isDemon
-                        ? new THREE.Color(0.025, 0.050, 0.095)  // Matched to Dark Square
-                        : new THREE.Color(0.850, 0.900, 0.950)  // BRIGHT ALABASTER for Angels
+                    ? new THREE.Color(0.396, 0.435, 0.420)
+                    : isNorthmen
+                        ? new THREE.Color(0.10, 0.13, 0.18)   // Dark steel
+                        : isDemon
+                            ? new THREE.Color(0.025, 0.050, 0.095)
+                            : new THREE.Color(0.850, 0.900, 0.950)
             },
             u_bright: {
                 value: isNokron
-                    ? new THREE.Color(0.792, 0.870, 0.840)  // bright lit stone
-                    : isDemon
-                        ? new THREE.Color(0.080, 0.160, 0.280)  // Matched to Dark Square
-                        : new THREE.Color(0.950, 1.000, 1.000)  // SHARP WHITE for Angels
+                    ? new THREE.Color(0.792, 0.870, 0.840)
+                    : isNorthmen
+                        ? new THREE.Color(0.25, 0.30, 0.38)   // Cold iron edge
+                        : isDemon
+                            ? new THREE.Color(0.080, 0.160, 0.280)
+                            : new THREE.Color(0.950, 1.000, 1.000)
             },
 
             u_lightDir: { value: new THREE.Vector3(-4, 14, 0).normalize() },

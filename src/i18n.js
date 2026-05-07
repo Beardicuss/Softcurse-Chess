@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 export const T = {
     en: {
-        PLAY: "PLAY", NEW_GAME: "NEW GAME", CONTINUE: "CONTINUE", HOW_TO_PLAY: "HOW TO PLAY",
+        PLAY: "PLAY", NEW_GAME: "NEW GAME", CONTINUE: "CONTINUE", TREASURY: "TREASURY",
         SETTINGS: "SETTINGS", CREDITS: "CREDITS", EXIT: "EXIT", BACK: "BACK", AUDIO: "AUDIO",
         RESUME: "RESUME", MAIN_MENU: "MAIN MENU",
         MASTER: "MASTER", MUSIC: "MUSIC", SFX: "SFX", LANGUAGE: "LANGUAGE", NO_SAVE: "NO SAVE",
@@ -26,9 +26,7 @@ export const T = {
         CHECK: "CHECK", STALEMATE: "STALEMATE", DRAW: "DRAW", RESIGN: "RESIGN",
         TAP_CONTINUE: "TAP TO CONTINUE",
         LOADING_1: "Loading world...", LOADING_2: "Summoning armies...", LOADING_3: "Preparing the board...",
-        HT_1: "Select a piece", HT_2: "Move to square", HT_3: "Orbit camera",
-        HT_4: "Zoom in / out", HT_5: "Take back last move", HT_6: "Reset the board",
-        HT_1K: "LEFT CLICK", HT_2K: "LEFT CLICK DOT", HT_3K: "RIGHT DRAG", HT_4K: "SCROLL", HT_5K: "UNDO", HT_6K: "NEW GAME",
+        PIECES: "PIECES", BOARD: "BOARD", SCENE: "SCENE",
         TURN_W: "⚔  WHITE'S TURN", TURN_B: "⚔  BLACK'S TURN",
         CHECK_W: "⚠️ WHITE IS IN CHECK!", CHECK_B: "⚠️ BLACK IS IN CHECK!",
         MATE_W: "💀 CHECKMATE — ANGELS WIN", MATE_B: "💀 CHECKMATE — DEMONS WIN",
@@ -56,7 +54,7 @@ export const T = {
         ABOUT_WEB: "OFFICIAL WEBSITE"
     },
     ru: {
-        PLAY: "ИГРАТЬ", NEW_GAME: "НОВАЯ ИГРА", CONTINUE: "ПРОДОЛЖИТЬ", HOW_TO_PLAY: "КАК ИГРАТЬ",
+        PLAY: "ИГРАТЬ", NEW_GAME: "НОВАЯ ИГРА", CONTINUE: "ПРОДОЛЖИТЬ", TREASURY: "СОКРОВИЩНИЦА",
         SETTINGS: "НАСТРОЙКИ", CREDITS: "СОЗДАТЕЛИ", EXIT: "ВЫХОД", BACK: "НАЗАД", AUDIO: "ЗВУК",
         RESUME: "ПРОДОЛЖИТЬ", MAIN_MENU: "ГЛАВНОЕ МЕНЮ",
         MASTER: "ОБЩИЙ", MUSIC: "МУЗЫКА", SFX: "ЭФФЕКТЫ", LANGUAGE: "ЯЗЫК", NO_SAVE: "НЕТ СОХРАНЕНИЙ",
@@ -80,9 +78,7 @@ export const T = {
         CHECK: "ШАХ", STALEMATE: "ПАТ", DRAW: "НИЧЬЯ", RESIGN: "СДАТЬСЯ",
         TAP_CONTINUE: "НАЖМИТЕ ДЛЯ ПРОДОЛЖЕНИЯ",
         LOADING_1: "Загрузка мира...", LOADING_2: "Призыв армий...", LOADING_3: "Подготовка доски...",
-        HT_1: "Выбрать фигуру", HT_2: "Сделать ход", HT_3: "Вращать камеру",
-        HT_4: "Приблизить / Отдалить", HT_5: "Отменить последний ход", HT_6: "Сбросить доску",
-        HT_1K: "ЛЕВАЯ КНОПКА", HT_2K: "ЛЕВ.КНОПКА (ТОЧКА)", HT_3K: "ПРАВАЯ КНОПКА", HT_4K: "КОЛЕСИКО", HT_5K: "ОТМЕНИТЬ", HT_6K: "НОВАЯ ИГРА",
+        PIECES: "ФИГУРЫ", BOARD: "ДОСКА", SCENE: "СЦЕНА",
         TURN_W: "⚔  ХОД АНГЕЛОВ", TURN_B: "⚔  ХОД ДЕМОНОВ",
         CHECK_W: "⚠️ АНГЕЛАМ ШАХ!", CHECK_B: "⚠️ ДЕМОНАМ ШАХ!",
         MATE_W: "💀 ШАХ И МАТ — АНГЕЛЫ ВЫИГРАЛИ", MATE_B: "💀 ШАХ И МАТ — ДЕМОНЫ ВЫИГРАЛИ",
@@ -110,7 +106,7 @@ export const T = {
         ABOUT_WEB: "ОФИЦИАЛЬНЫЙ САЙТ"
     },
     ge: {
-        PLAY: "თამაში", NEW_GAME: "ახალი თამაში", CONTINUE: "გაგრძელება", HOW_TO_PLAY: "როგორ ვითამაშოთ",
+        PLAY: "თამაში", NEW_GAME: "ახალი თამაში", CONTINUE: "გაგრძელება", TREASURY: "საგანძური",
         SETTINGS: "პარამეტრები", CREDITS: "ავტორები", EXIT: "გამოსვლა", BACK: "უკან", AUDIO: "ხმა",
         RESUME: "დაბრუნება", MAIN_MENU: "მთავარი მენიუ",
         MASTER: "მთავარი", MUSIC: "მუსიკა", SFX: "ეფექტები", LANGUAGE: "ენა", NO_SAVE: "შენახული არ არის",
@@ -134,9 +130,7 @@ export const T = {
         CHECK: "შახი", STALEMATE: "პატი", DRAW: "ყაიმი", RESIGN: "დანებება",
         TAP_CONTINUE: "დააჭირეთ გასაგრძელებლად",
         LOADING_1: "სამყაროს ჩატვირთვა...", LOADING_2: "არმიების გამოძახება...", LOADING_3: "დაფის მომზადება...",
-        HT_1: "ფიგურის არჩევა", HT_2: "სვლა", HT_3: "კამერის მობრუნება",
-        HT_4: "გადიდება / დაპატარავება", HT_5: "ბოლო სვლის დაბრუნება", HT_6: "დაფის გასუფთავება",
-        HT_1K: "მარცხენა კლიკი", HT_2K: "მარცხენა კლიკი (წერტილი)", HT_3K: "მარჯვენა კლიკი", HT_4K: "სქროლი", HT_5K: "გაუქმება", HT_6K: "ახალი თამაში",
+        PIECES: "ფიგურები", BOARD: "დაფა", SCENE: "სცენა",
         TURN_W: "⚔  თეთრების სვლა", TURN_B: "⚔  შავების სვლა",
         CHECK_W: "⚠️ შახი თეთრებს!", CHECK_B: "⚠️ შახი შავებს!",
         MATE_W: "💀 შამათი — თეთრებმა მოიგეს", MATE_B: "💀 შამათი — შავებმა მოიგეს",

@@ -18,7 +18,7 @@ const PROMO_OPTS = [
 import "./ui/ChessUI.css";
 import Crest from "./ui/Crest.jsx";
 import CreditsPanel from "./ui/CreditsPanel.jsx";
-import HowToPlayPanel from "./ui/HowToPlayPanel.jsx";
+import TreasuryPanel from "./ui/TreasuryPanel.jsx";
 import SettingsPanel from "./ui/SettingsPanel.jsx";
 import NewGamePanel from "./ui/NewGamePanel.jsx";
 
@@ -31,7 +31,7 @@ import NewGamePanel from "./ui/NewGamePanel.jsx";
 // ── Main Menu overlay ────────────────────────────────────────
 function MainMenu({ onStart, hasSave, allPhasesReady }) {
     const { t } = useLang();
-    const [panel, setPanel] = useState("main"); // "main" | "newgame" | "credits" | "howtoplay"
+    const [panel, setPanel] = useState("main"); // "main" | "newgame" | "credits" | "treasury"
     const [visible, setVisible] = useState(false);
     const touchStartX = useRef(null);
 
@@ -56,7 +56,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
     const MENU_ITEMS = [
         { label: t.NEW_GAME, icon: "⚔", panel: "newgame", delay: 0 },
         { label: t.CONTINUE, icon: "▶", panel: "continue", delay: 80, disabled: !hasSave },
-        { label: t.HOW_TO_PLAY, icon: "📖", panel: "howtoplay", delay: 160 },
+        { label: t.TREASURY, icon: "💎", panel: "treasury", delay: 160 },
         { label: t.SETTINGS, icon: "⚙", panel: "settings", delay: 240 },
         { label: t.CREDITS, icon: "✦", panel: "credits", delay: 320 },
         { label: t.EXIT, icon: "⏏", panel: "exit", delay: 400 },
@@ -168,7 +168,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                     {/* Sub panels */}
                     {panel === "newgame" && <NewGamePanel onStart={onStart} onBack={() => setPanel("main")} allPhasesReady={allPhasesReady} />}
                     {panel === "credits" && <CreditsPanel onBack={() => setPanel("main")} />}
-                    {panel === "howtoplay" && <HowToPlayPanel onBack={() => setPanel("main")} />}
+                    {panel === "treasury" && <TreasuryPanel onBack={() => setPanel("main")} />}
                     {panel === "settings" && <SettingsPanel onBack={() => setPanel("main")} />}
                 </div>
 

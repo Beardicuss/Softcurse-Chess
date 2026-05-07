@@ -505,6 +505,11 @@ export default function BattleChess3D() {
       historyRef.current = []; pendingLogRef.current = { w: null, b: null };
     };
 
+    // ── Live skin reload (called from Treasury panel) ──────────
+    window._battleChessReloadPieces = () => {
+      preloadModels().then(() => spawnAll(gsRef.current.board));
+    };
+
     window._battleChessMenuStart = (cfg) => {
       if (cfg) {
         if (cfg.mode) { modeRef.current = cfg.mode; setModeFixed(cfg.mode); }

@@ -5,6 +5,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { W } from "./chessEngine.js";
 import { ASSET_CDN } from "./constants.js";
 import { getAntiqueStoneMaterial } from "./antiqueStoneMaterial.js";
+import { getActiveSkin } from "./skinRegistry.js";
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
@@ -15,15 +16,16 @@ loader.setDRACOLoader(dracoLoader);
 const modelCache = {};
 const resolvedCache = {};
 
-const W_FILES = {
+// Default file maps (used as fallback & for preloading the active skin)
+const DEFAULT_W_FILES = {
     P: "obj_003", R: "obj_005", N: "obj_002",
     B: "obj_000", Q: "obj_004", K: "obj_001",
 };
-const B_FILES = {
+const DEFAULT_B_FILES = {
     P: "obj_009", R: "obj_011", N: "obj_008",
     B: "obj_006", Q: "obj_010", K: "obj_007",
 };
-const PIECE_SCALE = {
+const DEFAULT_SCALE = {
     P: 0.55, R: 0.65, N: 0.7, B: 0.75, Q: 0.85, K: 0.9,
 };
 
@@ -65,8 +67,11 @@ function loadGeometry(name) {
 }
 
 export function preloadModels() {
-    const allNames = [...Object.values(W_FILES), ...Object.values(B_FILES)];
-    return Promise.all([...new Set(allNames)].map((n) => loadGeometry(n)));
+    const skin = getActiveSkin();
+    const allNames = [...Object.values(skin.white), ...Object.values(skin.black)];
+    // Also preload defaults so fallback always works
+    const defaultNames = [...Object.values(DEFAULT_W_FILES), ...Object.values(DEFAULT_B_FILES)];
+    return Promise.all([...new Set([...allNames, ...defaultNames])].map((n) => loadGeometry(n)));
 }
 
 function makeProcedural(type, color) {
@@ -129,13 +134,19 @@ function makeProcedural(type, color) {
 export function makePiece(type, color) {
     const g = new THREE.Group();
     const isW = color === W;
-    const style = isW ? 'angel' : 'demon';
 
-    // ── FIX 1: reuse shared material, no new allocation ──
+    // ── Dynamic skin lookup ──
+    const skin = getActiveSkin();
+    const fileMap = isW ? skin.white : skin.black;
+    const scaleMap = skin.scale || DEFAULT_SCALE;
+    const matStyle = isW ? (skin.materialStyle?.white || 'angel') : (skin.materialStyle?.black || 'demon');
+
     const accentMat = isW ? ACCENT_MAT_W : ACCENT_MAT_B;
-
-    const modelName = isW ? W_FILES[type] : B_FILES[type];
-    const scale = PIECE_SCALE[type] || 0.7;
+    const modelName = fileMap[type];
+    const scale = scaleMap[type] || 0.7;
+    const yOff = skin.yOffset?.[type] || 0;
+    const rotMap = isW ? (skin.rotationYWhite || skin.rotationY) : (skin.rotationYBlack || skin.rotationY);
+    const rotY = rotMap?.[type] || 0;
 
     loadGeometry(modelName)
         .then((geoMeshObj) => {
@@ -143,7 +154,7 @@ export function makePiece(type, color) {
 
             const mesh = new THREE.Mesh(
                 geoMeshObj.geometry,
-                getAntiqueStoneMaterial(style)
+                getAntiqueStoneMaterial(matStyle)
             );
             mesh.castShadow = true;
             mesh.receiveShadow = false;
@@ -157,9 +168,17 @@ export function makePiece(type, color) {
             const cx = (bb.min.x + bb.max.x) / 2 * desiredScale;
             const cz = (bb.min.z + bb.max.z) / 2 * desiredScale;
             const bottom = bb.min.y * desiredScale;
-            mesh.position.set(-cx, -bottom, -cz);
+            mesh.position.set(-cx, -bottom + yOff, -cz);
 
-            g.add(mesh);
+            // Per-skin rotation: use a pivot group so rotation is around the piece center
+            if (rotY) {
+                const pivot = new THREE.Group();
+                pivot.add(mesh);
+                pivot.rotation.y = rotY;
+                g.add(pivot);
+            } else {
+                g.add(mesh);
+            }
         })
         .catch(() => {
             const fallback = makeProcedural(type, color);
