@@ -28,6 +28,8 @@ function createAntiqueStoneMaterial(style) {
         northmen: { dark: [0.020, 0.030, 0.050], mid: [0.100, 0.130, 0.180], bright: [0.250, 0.300, 0.380] },
         erdtree: { dark: [0.120, 0.080, 0.020], mid: [0.500, 0.350, 0.100], bright: [0.850, 0.650, 0.250] },
         cthulhu: { dark: [0.010, 0.040, 0.030], mid: [0.040, 0.140, 0.100], bright: [0.120, 0.320, 0.220] },
+        stone_white: { dark: [0.700, 0.700, 0.700], mid: [0.900, 0.900, 0.900], bright: [1.000, 1.000, 1.000] },
+        stone_black: { dark: [0.005, 0.005, 0.008], mid: [0.030, 0.030, 0.035], bright: [0.100, 0.100, 0.110] },
     };
 
     const p = PALETTES[style] || PALETTES.angel;

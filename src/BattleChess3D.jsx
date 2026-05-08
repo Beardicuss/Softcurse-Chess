@@ -245,16 +245,35 @@ export default function BattleChess3D() {
     function animPiece(mesh, target, duration, cb) { _animPiece(mesh, target, duration, animatingRef, cb); }
     function battleAnim(attacker, victim, target, col, cb) { _battleAnim(animCtx, attacker, victim, target, col, BOARD_Y, cb); }
 
-    // Glowing dark purple selection disc
-    const selGlowMat = new THREE.MeshBasicMaterial({
-      color: 0x0a4b66, transparent: true, opacity: 0,
-      side: THREE.DoubleSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending
+    // ── Piece outline on selection (inverted hull technique) ────
+    let outlineMeshes = []; // cloned outline shells
+    const OUTLINE_MAT = new THREE.MeshBasicMaterial({
+      color: 0xc5a059, side: THREE.BackSide,
+      transparent: true, opacity: 0.7,
+      depthWrite: false,
     });
-    const selGlow = new THREE.Mesh(new THREE.CircleGeometry(0.35, 32), selGlowMat);
-    selGlow.rotation.x = -Math.PI / 2;
-    selGlow.position.y = 0.025; // Sits above the marble tiles
-    selGlow.visible = false;
-    scene.add(selGlow);
+    const OUTLINE_SCALE = 1.08; // 8% larger than original
+
+    function setOutline(group) {
+      clearOutline();
+      if (!group) return;
+      group.traverse((child) => {
+        if (!child.isMesh || !child.geometry) return;
+        const outline = new THREE.Mesh(child.geometry, OUTLINE_MAT);
+        // Copy world transform from the original mesh
+        child.updateWorldMatrix(true, false);
+        outline.applyMatrix4(child.matrixWorld);
+        outline.scale.multiplyScalar(OUTLINE_SCALE);
+        outline.renderOrder = -1;
+        scene.add(outline);
+        outlineMeshes.push(outline);
+      });
+    }
+
+    function clearOutline() {
+      for (const m of outlineMeshes) scene.remove(m);
+      outlineMeshes = [];
+    }
 
     // Pre-flatten for clearHL performance (avoid .flat() per call)
     const flatSqMeshes = sqMeshes.flat();
@@ -266,8 +285,7 @@ export default function BattleChess3D() {
 
     function clearHL() {
       flatSqMeshes.forEach(m => { m.userData.mat.opacity = 0; m.userData.mat.visible = false; });
-      selGlow.visible = false;
-      selGlowMat.opacity = 0;
+      clearOutline();
     }
 
     function showHL(sel, moves, last, checkC, board) {
@@ -275,13 +293,9 @@ export default function BattleChess3D() {
 
       if (sel) {
         const [r, f] = sel;
-
-        // Ensure pulse disc is active beneath the piece ONLY (no flat square shading)
-        selGlowMat.color.setHex(0x0a4b66);
-        selGlowMat.opacity = 0.9;
-        const sPos = toWorld(r, f);
-        selGlow.position.set(sPos.x, sPos.y + 0.055, sPos.z);
-        selGlow.visible = true;
+        // Outline the selected piece
+        const key = `${r},${f}`;
+        if (PM[key]) setOutline(PM[key]);
       }
 
       // Removed the DOM_POOL / RING_POOL iteration here per user request for a cleaner look.
@@ -711,12 +725,10 @@ export default function BattleChess3D() {
         if (background && background.tick) background.tick(time);
       }
 
-      // Pulsing dark purple glow disc under selected piece
-      if (selGlow.visible) {
-        const pulse = 0.4 + Math.sin(time * 0.005) * 0.3; // 0.1 → 0.7
-        selGlowMat.opacity = pulse;
-        const s = 1.0 + Math.sin(time * 0.004) * 0.12;   // subtle scale breathe
-        selGlow.scale.set(s, s, 1);
+      // Pulsing outline on selected piece
+      if (outlineMeshes.length > 0) {
+        const pulse = 0.5 + Math.sin(time * 0.004) * 0.3;
+        OUTLINE_MAT.opacity = pulse;
       }
 
       // In-place compaction: zero allocations, no splice GC pressure

@@ -40,6 +40,29 @@ const ACCENT_MAT_B = new THREE.MeshStandardMaterial({
     emissiveIntensity: 0.6, metalness: 0.9, roughness: 0.05,
 });
 
+// ── Glossy PBR materials for Classic Staunton ─────────────────
+const glossyCache = {};
+function getGlossyMaterial(style) {
+    if (!glossyCache[style]) {
+        const isWhite = style === 'glossy_white';
+        glossyCache[style] = new THREE.MeshPhysicalMaterial({
+            color: isWhite ? 0xe8e8e8 : 0x1a1a1a,
+            metalness: isWhite ? 0.05 : 0.15,
+            roughness: isWhite ? 0.12 : 0.08,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.08,
+            reflectivity: 0.9,
+            envMapIntensity: 1.2,
+        });
+    }
+    return glossyCache[style];
+}
+
+function getMaterial(style) {
+    if (style.startsWith('glossy_')) return getGlossyMaterial(style);
+    return getAntiqueStoneMaterial(style);
+}
+
 function loadGeometry(name) {
     if (!modelCache[name]) {
         modelCache[name] = new Promise((resolve, reject) => {
@@ -154,7 +177,7 @@ export function makePiece(type, color) {
 
             const mesh = new THREE.Mesh(
                 geoMeshObj.geometry,
-                getAntiqueStoneMaterial(matStyle)
+                getMaterial(matStyle)
             );
             mesh.castShadow = true;
             mesh.receiveShadow = false;

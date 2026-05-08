@@ -3,13 +3,15 @@
 //  To add a new skin: create src/skins/your_skin.js + import here
 // ═══════════════════════════════════════════════════════════════
 
+import classic_staunton from "./skins/classic_staunton.js";
 import angels_demons from "./skins/angels_demons.js";
 import necro_templar from "./skins/necro_templar.js";
 import northmen_saxons from "./skins/northmen_saxons.js";
 import elden_cthulhu from "./skins/elden_cthulhu.js";
 
-// ── Piece skins — add new imports above + append to this array ──
+// ── Piece skins — first entry = default ──
 export const PIECE_SKINS = [
+    classic_staunton,
     angels_demons,
     necro_templar,
     northmen_saxons,
@@ -32,7 +34,7 @@ export function getActiveSkinId() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved && PIECE_SKINS.some(s => s.id === saved)) return saved;
     } catch (e) { /* storage blocked */ }
-    return "angels_demons";
+    return "classic_staunton";
 }
 
 export function setActiveSkinId(id) {

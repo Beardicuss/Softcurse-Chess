@@ -23,11 +23,13 @@ export function createCameraController(opts) {
 
     function updateCam() {
         const { theta, phi, dist } = camState.current;
+        const panX = camState.current.panX || 0;
+        const panZ = camState.current.panZ || 0;
         const pitchMod = gameStartedRef.current ? 0 : 0.2;
-        camera.position.x = dist * Math.sin(theta) * Math.cos(phi + pitchMod);
+        camera.position.x = panX + dist * Math.sin(theta) * Math.cos(phi + pitchMod);
         camera.position.y = BOARD_Y + dist * Math.sin(phi + pitchMod);
-        camera.position.z = dist * Math.cos(theta) * Math.cos(phi + pitchMod);
-        camera.lookAt(0, BOARD_Y + 0.5, 0);
+        camera.position.z = panZ + dist * Math.cos(theta) * Math.cos(phi + pitchMod);
+        camera.lookAt(panX, BOARD_Y + 0.5, panZ);
     }
 
     function getSquareFromHit(hits) {
@@ -45,12 +47,14 @@ export function createCameraController(opts) {
     }
 
     // ── Mouse controls ─────────────────────────────────────────
-    let isDrag = false, dsx = 0, dsy = 0, didMove = false;
+    // Right-click drag = orbit rotation, Left-click drag = camera pan
+    let isDrag = false, dragButton = -1, dsx = 0, dsy = 0, didMove = false;
 
     const onMouseDown = (e) => {
         AudioEngine.init();
-        if (e.button === 2 || e.button === 0) {
-            isDrag = true; didMove = false; dsx = e.clientX; dsy = e.clientY;
+        if (e.button === 0 || e.button === 2) {
+            isDrag = true; dragButton = e.button; didMove = false;
+            dsx = e.clientX; dsy = e.clientY;
         }
     };
 
@@ -58,13 +62,28 @@ export function createCameraController(opts) {
         if (!isDrag) return;
         const dx = e.clientX - dsx, dy = e.clientY - dsy;
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove = true;
-        camState.current.targetTheta -= dx * 0.005;
-        camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi + dy * 0.005));
+
+        if (dragButton === 2) {
+            // Right-click: orbit rotation
+            camState.current.targetTheta -= dx * 0.005;
+            camState.current.targetPhi = Math.max(0.14, Math.min(Math.PI / 2.3, camState.current.targetPhi + dy * 0.005));
+        } else if (dragButton === 0) {
+            // Left-click: camera pan (move look-at point laterally)
+            const panSpeed = 0.02 * camState.current.dist / 14;
+            const theta = camState.current.theta;
+            // Pan perpendicular to camera direction
+            camState.current.panX = (camState.current.panX || 0) - dx * panSpeed * Math.cos(theta) - dy * panSpeed * Math.sin(theta) * 0.5;
+            camState.current.panZ = (camState.current.panZ || 0) + dx * panSpeed * Math.sin(theta) - dy * panSpeed * Math.cos(theta) * 0.5;
+            // Clamp pan range
+            camState.current.panX = Math.max(-5, Math.min(5, camState.current.panX));
+            camState.current.panZ = Math.max(-5, Math.min(5, camState.current.panZ));
+        }
+
         dsx = e.clientX; dsy = e.clientY;
     };
 
     const onMouseUp = (e) => {
-        isDrag = false;
+        isDrag = false; dragButton = -1;
         if (!gameStartedRef.current || didMove) return;
         if (e.button !== 0) return;
         const rect = renderer.domElement.getBoundingClientRect();
