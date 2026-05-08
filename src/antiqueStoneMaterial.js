@@ -21,6 +21,8 @@ function createAntiqueStoneMaterial(style) {
     const isNokron = style === 'nokron';
     const isAngel = style === 'angel';
     const isNorthmen = style === 'northmen';
+    const isErdtree = style === 'erdtree';
+    const isCthulhu = style === 'cthulhu';
 
     return new THREE.ShaderMaterial({
         uniforms: {
@@ -28,29 +30,41 @@ function createAntiqueStoneMaterial(style) {
             u_dark: {
                 value: isNokron
                     ? new THREE.Color(0.025, 0.030, 0.035)
-                    : isNorthmen
-                        ? new THREE.Color(0.02, 0.03, 0.05)   // Deep iron shadow
-                        : isDemon
-                            ? new THREE.Color(0.008, 0.012, 0.022)
-                            : new THREE.Color(0.550, 0.600, 0.650)
+                    : isErdtree
+                        ? new THREE.Color(0.12, 0.08, 0.02)   // Deep amber shadow
+                        : isCthulhu
+                            ? new THREE.Color(0.01, 0.04, 0.03)   // Abyssal sea floor
+                            : isNorthmen
+                                ? new THREE.Color(0.02, 0.03, 0.05)
+                                : isDemon
+                                    ? new THREE.Color(0.008, 0.012, 0.022)
+                                    : new THREE.Color(0.550, 0.600, 0.650)
             },
             u_mid: {
                 value: isNokron
                     ? new THREE.Color(0.396, 0.435, 0.420)
-                    : isNorthmen
-                        ? new THREE.Color(0.10, 0.13, 0.18)   // Dark steel
-                        : isDemon
-                            ? new THREE.Color(0.025, 0.050, 0.095)
-                            : new THREE.Color(0.850, 0.900, 0.950)
+                    : isErdtree
+                        ? new THREE.Color(0.50, 0.35, 0.10)   // Warm gold
+                        : isCthulhu
+                            ? new THREE.Color(0.04, 0.14, 0.10)   // Deep sea green
+                            : isNorthmen
+                                ? new THREE.Color(0.10, 0.13, 0.18)
+                                : isDemon
+                                    ? new THREE.Color(0.025, 0.050, 0.095)
+                                    : new THREE.Color(0.850, 0.900, 0.950)
             },
             u_bright: {
                 value: isNokron
                     ? new THREE.Color(0.792, 0.870, 0.840)
-                    : isNorthmen
-                        ? new THREE.Color(0.25, 0.30, 0.38)   // Cold iron edge
-                        : isDemon
-                            ? new THREE.Color(0.080, 0.160, 0.280)
-                            : new THREE.Color(0.950, 1.000, 1.000)
+                    : isErdtree
+                        ? new THREE.Color(0.85, 0.65, 0.25)   // Bright Erdtree gold
+                        : isCthulhu
+                            ? new THREE.Color(0.12, 0.32, 0.22)   // Eerie teal glow
+                            : isNorthmen
+                                ? new THREE.Color(0.25, 0.30, 0.38)
+                                : isDemon
+                                    ? new THREE.Color(0.080, 0.160, 0.280)
+                                    : new THREE.Color(0.950, 1.000, 1.000)
             },
 
             u_lightDir: { value: new THREE.Vector3(-4, 14, 0).normalize() },
