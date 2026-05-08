@@ -17,55 +17,26 @@ export function updateAntiqueStoneMaterials(camera) {
 }
 
 function createAntiqueStoneMaterial(style) {
-    const isDemon = style === 'demon';
     const isNokron = style === 'nokron';
-    const isAngel = style === 'angel';
-    const isNorthmen = style === 'northmen';
-    const isErdtree = style === 'erdtree';
-    const isCthulhu = style === 'cthulhu';
+
+    // ── Palette registry — add new styles here ──────────────────
+    // Each entry: [dark, mid, bright] as THREE.Color
+    const PALETTES = {
+        angel: { dark: [0.550, 0.600, 0.650], mid: [0.850, 0.900, 0.950], bright: [0.950, 1.000, 1.000] },
+        demon: { dark: [0.008, 0.012, 0.022], mid: [0.025, 0.050, 0.095], bright: [0.080, 0.160, 0.280] },
+        nokron: { dark: [0.025, 0.030, 0.035], mid: [0.396, 0.435, 0.420], bright: [0.792, 0.870, 0.840] },
+        northmen: { dark: [0.020, 0.030, 0.050], mid: [0.100, 0.130, 0.180], bright: [0.250, 0.300, 0.380] },
+        erdtree: { dark: [0.120, 0.080, 0.020], mid: [0.500, 0.350, 0.100], bright: [0.850, 0.650, 0.250] },
+        cthulhu: { dark: [0.010, 0.040, 0.030], mid: [0.040, 0.140, 0.100], bright: [0.120, 0.320, 0.220] },
+    };
+
+    const p = PALETTES[style] || PALETTES.angel;
 
     return new THREE.ShaderMaterial({
         uniforms: {
-            // ── Nokron palette: abyss blue → slate → cold frost ──────
-            u_dark: {
-                value: isNokron
-                    ? new THREE.Color(0.025, 0.030, 0.035)
-                    : isErdtree
-                        ? new THREE.Color(0.12, 0.08, 0.02)   // Deep amber shadow
-                        : isCthulhu
-                            ? new THREE.Color(0.01, 0.04, 0.03)   // Abyssal sea floor
-                            : isNorthmen
-                                ? new THREE.Color(0.02, 0.03, 0.05)
-                                : isDemon
-                                    ? new THREE.Color(0.008, 0.012, 0.022)
-                                    : new THREE.Color(0.550, 0.600, 0.650)
-            },
-            u_mid: {
-                value: isNokron
-                    ? new THREE.Color(0.396, 0.435, 0.420)
-                    : isErdtree
-                        ? new THREE.Color(0.50, 0.35, 0.10)   // Warm gold
-                        : isCthulhu
-                            ? new THREE.Color(0.04, 0.14, 0.10)   // Deep sea green
-                            : isNorthmen
-                                ? new THREE.Color(0.10, 0.13, 0.18)
-                                : isDemon
-                                    ? new THREE.Color(0.025, 0.050, 0.095)
-                                    : new THREE.Color(0.850, 0.900, 0.950)
-            },
-            u_bright: {
-                value: isNokron
-                    ? new THREE.Color(0.792, 0.870, 0.840)
-                    : isErdtree
-                        ? new THREE.Color(0.85, 0.65, 0.25)   // Bright Erdtree gold
-                        : isCthulhu
-                            ? new THREE.Color(0.12, 0.32, 0.22)   // Eerie teal glow
-                            : isNorthmen
-                                ? new THREE.Color(0.25, 0.30, 0.38)
-                                : isDemon
-                                    ? new THREE.Color(0.080, 0.160, 0.280)
-                                    : new THREE.Color(0.950, 1.000, 1.000)
-            },
+            u_dark: { value: new THREE.Color(...p.dark) },
+            u_mid: { value: new THREE.Color(...p.mid) },
+            u_bright: { value: new THREE.Color(...p.bright) },
 
             u_lightDir: { value: new THREE.Vector3(-4, 14, 0).normalize() },
             u_lightDir2: { value: new THREE.Vector3(4, 14, 0).normalize() },
