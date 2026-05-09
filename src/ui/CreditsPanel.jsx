@@ -4,33 +4,37 @@ import { useLang } from "../i18n.js";
 export default function CreditsPanel({ onBack }) {
     const { t } = useLang();
     return (
-        <div className="sub-panel" style={{ width: "100%" }}>
-            <div style={{ color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+        <div className="sub-panel" style={{ width: "100%", maxWidth: "600px", margin: "0", textAlign: "left", paddingRight: "10px" }}>
+            <div style={{
+                color: "#c8cdd4", fontSize: "clamp(28px, 6vw, 42px)", letterSpacing: "4px",
+                marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif",
+                fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)"
+            }}>
                 {t.CREDITS || "ABOUT & CREATORS"}
             </div>
 
             <div style={{
                 maxHeight: "50vh",
                 overflowY: "auto",
-                padding: "0 10px",
-                marginBottom: "20px",
-                textAlign: "center",
-                fontFamily: "'Cinzel', serif",
-                fontSize: "12px",
-                lineHeight: "1.6",
-                color: "rgba(197,160,89,0.8)"
+                paddingRight: "12px",
+                marginBottom: "24px",
+                textAlign: "left",
+                fontFamily: "sans-serif",
+                fontSize: "13px",
+                lineHeight: "1.7",
+                color: "rgba(200,210,220,0.7)"
             }}>
-                <div style={{ color: "#c5a059", fontSize: "20px", marginBottom: "6px", fontWeight: 700, fontFamily: "'Cinzel Decorative', serif", textShadow: "0 0 10px rgba(197,160,89,0.4)" }}>{t.ABOUT_1}</div>
-                <div style={{ opacity: 0.9, color: "#e0c88a", fontSize: "13px", letterSpacing: "1px", marginBottom: "24px", fontStyle: "italic" }}>
+                <div style={{ color: "#c8cdd4", fontSize: "22px", marginBottom: "8px", fontWeight: 700, fontFamily: "'Cinzel Decorative', serif", textShadow: "0 0 15px rgba(200,210,220,0.3)" }}>{t.ABOUT_1}</div>
+                <div style={{ opacity: 0.9, color: "#e0c88a", fontSize: "14px", letterSpacing: "1px", marginBottom: "28px", fontStyle: "italic", fontFamily: "'Cinzel', serif" }}>
                     {t.ABOUT_2}
                 </div>
 
-                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_3 }} />
+                <div style={{ marginBottom: "24px", paddingLeft: "16px", borderLeft: "2px solid rgba(200,210,220,0.1)" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_3 }} />
 
-                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_4}</div>
-                <div style={{ marginBottom: "20px", textAlign: "left", display: "inline-block" }}>
+                <div style={{ color: "#c8cdd4", fontSize: "15px", letterSpacing: "3px", margin: "24px 0 12px", fontWeight: 700, fontFamily: "'Cinzel', serif" }}>{t.ABOUT_4}</div>
+                <div style={{ marginBottom: "24px", textAlign: "left", display: "block" }}>
                     {t.ABOUT_5}<br />
-                    <ul style={{ paddingLeft: "20px", marginTop: "10px", color: "rgba(197,160,89,0.7)" }}>
+                    <ul style={{ paddingLeft: "20px", marginTop: "12px", color: "rgba(200,210,220,0.6)", display: "flex", flexDirection: "column", gap: "8px" }}>
                         <li>{t.ABOUT_6_LI1}</li>
                         <li>{t.ABOUT_6_LI2}</li>
                         <li>{t.ABOUT_6_LI3}</li>
@@ -39,29 +43,29 @@ export default function CreditsPanel({ onBack }) {
                         <li>{t.ABOUT_6_LI6}</li>
                     </ul>
                 </div>
-                <div style={{ marginBottom: "20px", color: "#e0c88a", fontWeight: "bold", letterSpacing: "1px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_7 }} />
+                <div style={{ marginBottom: "24px", color: "#e0c88a", fontWeight: "bold", letterSpacing: "1px", paddingLeft: "16px", borderLeft: "2px solid rgba(197,160,89,0.3)" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_7 }} />
 
-                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_8}</div>
-                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_9 }} />
+                <div style={{ color: "#c8cdd4", fontSize: "15px", letterSpacing: "3px", margin: "24px 0 12px", fontWeight: 700, fontFamily: "'Cinzel', serif" }}>{t.ABOUT_8}</div>
+                <div style={{ marginBottom: "24px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_9 }} />
 
-                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_10}</div>
-                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_11 }} />
+                <div style={{ color: "#c8cdd4", fontSize: "15px", letterSpacing: "3px", margin: "24px 0 12px", fontWeight: 700, fontFamily: "'Cinzel', serif" }}>{t.ABOUT_10}</div>
+                <div style={{ marginBottom: "24px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_11 }} />
 
-                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "20px 0 10px", fontWeight: 700 }}>{t.ABOUT_12}</div>
-                <div style={{ marginBottom: "20px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_13 }} />
+                <div style={{ color: "#c8cdd4", fontSize: "15px", letterSpacing: "3px", margin: "24px 0 12px", fontWeight: 700, fontFamily: "'Cinzel', serif" }}>{t.ABOUT_12}</div>
+                <div style={{ marginBottom: "24px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_13 }} />
 
-                <div style={{ color: "#c5a059", fontSize: "14px", letterSpacing: "2px", margin: "24px 0 10px", fontWeight: 700 }}>{t.ABOUT_14}</div>
-                <div style={{ marginBottom: "24px", color: "#e0c88a", fontStyle: "italic", letterSpacing: "1px" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_15 }} />
+                <div style={{ color: "#c8cdd4", fontSize: "15px", letterSpacing: "3px", margin: "28px 0 12px", fontWeight: 700, fontFamily: "'Cinzel', serif" }}>{t.ABOUT_14}</div>
+                <div style={{ marginBottom: "32px", color: "#e0c88a", fontStyle: "italic", letterSpacing: "1px", paddingLeft: "16px", borderLeft: "2px solid rgba(197,160,89,0.3)" }} dangerouslySetInnerHTML={{ __html: t.ABOUT_15 }} />
 
-                <div style={{ marginTop: "30px", padding: "15px", border: "1px solid rgba(197,160,89,0.2)", background: "rgba(197,160,89,0.05)" }}>
-                    <a href="https://softcurse-website.pages.dev/" target="_blank" rel="noopener noreferrer" style={{ color: "#00ffff", textDecoration: "none", fontSize: "13px", letterSpacing: "2px", fontWeight: "bold", textShadow: "0 0 8px rgba(0,255,255,0.5)" }}>
+                <div style={{ marginTop: "30px", padding: "16px 20px", background: "linear-gradient(90deg, rgba(8,12,20,0.8), transparent)", borderLeft: "3px solid #00ffff" }}>
+                    <a href="https://softcurse-website.pages.dev/" target="_blank" rel="noopener noreferrer" style={{ color: "#00ffff", textDecoration: "none", fontSize: "14px", letterSpacing: "3px", fontWeight: "bold", textShadow: "0 0 10px rgba(0,255,255,0.4)", fontFamily: "'Cinzel', serif" }}>
                         {t.ABOUT_WEB}
                     </a>
                 </div>
             </div>
 
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
-            <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, justifyContent: "center", border: "none", background: "transparent" }}>
+            <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+            <button className="menu-item" onClick={onBack} style={{ fontSize: "15px", opacity: 0.6 }}>
                 <span className="menu-icon">←</span>
                 {t.BACK}
             </button>

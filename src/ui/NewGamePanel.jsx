@@ -111,10 +111,10 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
     ];
 
     return (
-        <div className="sub-panel" style={{ width: "100%" }}>
+        <div className="sub-panel" style={{ width: "100%", textAlign: "left", paddingRight: "10px" }}>
             {step === "mode" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {t.SELECT_MODE}
                     </div>
                     <button className="menu-item" onClick={() => handleModeSelect("ai")}>
@@ -133,8 +133,8 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         <span className="menu-icon">📽</span>
                         {t.AI_VS_AI}
                     </button>
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
-                    <button className="menu-item" onClick={onBack} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={onBack} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>
@@ -143,43 +143,41 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
             {step === "lobby" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {t.ONLINE_PVP || "ONLINE LOBBY"}
                     </div>
 
-                    {/* Private room section pinned to top */}
-                    <div style={{ display: "flex", gap: "10px", marginBottom: "20px", width: "100%" }}>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "16px", width: "100%" }}>
                         <button
-                            className="menu-item"
-                            style={{ fontSize: "12px", flex: 1, padding: "12px", margin: 0, justifyContent: "center", letterSpacing: "1px" }}
+                            className="hud-btn"
+                            style={{ flex: 1, padding: "12px", background: "rgba(8,12,20,0.6)", borderColor: "rgba(200,210,220,0.2)", color: "#c8cdd4", letterSpacing: "2px" }}
                             onClick={() => handleModeSelect("online_create")}>
                             ➕ PRIVATE
                         </button>
                         <button
-                            className="menu-item"
-                            style={{ fontSize: "12px", flex: 1, padding: "12px", margin: 0, justifyContent: "center", letterSpacing: "1px" }}
+                            className="hud-btn"
+                            style={{ flex: 1, padding: "12px", background: "rgba(8,12,20,0.6)", borderColor: "rgba(200,210,220,0.2)", color: "#c8cdd4", letterSpacing: "2px" }}
                             onClick={() => handleModeSelect("online_join")}>
                             🔗 JOIN
                         </button>
                     </div>
 
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "0 0 16px 0", width: "100%" }} />
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.1), transparent)", margin: "16px 0", width: "100%" }} />
 
-                    {/* Public Mythology Rooms Scrollable List */}
-                    <div style={{ maxHeight: "35vh", overflowY: "auto", paddingRight: "4px", width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ maxHeight: "35vh", overflowY: "auto", paddingRight: "4px", width: "100%", display: "flex", flexDirection: "column", gap: "4px" }}>
                         {MYTH_ROOMS.map(r => (
                             <button
                                 key={r}
                                 className="menu-item"
-                                style={{ fontSize: "14px", padding: "12px 18px", margin: 0 }}
+                                style={{ fontSize: "14px", padding: "10px 16px", margin: 0, gap: "12px" }}
                                 onClick={() => handleJoinNamedRoom(r)}>
-                                <span className="menu-icon" style={{ opacity: 0.5 }}>🏛</span> {r} <span style={{ marginLeft: "auto", fontSize: "10px", opacity: 0.4 }}>PUBLIC</span>
+                                <span className="menu-icon" style={{ opacity: 0.5, fontSize: "16px", minWidth: "20px" }}>🏛</span> {r} <span style={{ marginLeft: "auto", fontSize: "10px", opacity: 0.3, letterSpacing: "1px" }}>PUBLIC</span>
                             </button>
                         ))}
                     </div>
 
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
-                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>
@@ -188,7 +186,7 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
             {step === "join" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {t.ENTER_ROOM_CODE}
                     </div>
                     <input
@@ -199,11 +197,14 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         maxLength={6}
                         style={{
                             width: "100%", padding: "16px 20px", marginBottom: 16,
-                            background: "rgba(5,1,10,0.6)", border: "1px solid rgba(197,160,89,0.3)",
-                            color: "#c5a059", fontSize: "24px", letterSpacing: "12px",
+                            background: "rgba(5,8,18,0.7)", border: "1px solid rgba(200,210,220,0.2)",
+                            borderLeft: "3px solid #c8cdd4",
+                            color: "#c8cdd4", fontSize: "24px", letterSpacing: "12px",
                             fontFamily: "'Cinzel', serif", textAlign: "center",
-                            outline: "none",
+                            outline: "none", transition: "all 0.3s"
                         }}
+                        onFocus={(e) => e.target.style.borderColor = "rgba(197,160,89,0.5)"}
+                        onBlur={(e) => e.target.style.borderColor = "rgba(200,210,220,0.2)"}
                         onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
                         autoFocus
                     />
@@ -211,8 +212,8 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         <span className="menu-icon">▶</span>
                         {t.JOIN}
                     </button>
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
-                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>
@@ -221,15 +222,15 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
             {step === "waiting" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {roomCode ? t.ROOM_CODE : t.CONNECTING}
                     </div>
                     {roomCode && (
                         <div style={{
-                            fontSize: "clamp(28px, 7vw, 42px)", letterSpacing: "12px",
-                            color: "#e0c88a", fontFamily: "'Cinzel Decorative', serif",
-                            textAlign: "center", marginBottom: 20,
-                            textShadow: "0 0 20px rgba(197,160,89,0.5)",
+                            fontSize: "clamp(32px, 8vw, 48px)", letterSpacing: "12px",
+                            color: "#c5a059", fontFamily: "'Cinzel Decorative', serif",
+                            textAlign: "left", marginBottom: 20,
+                            textShadow: "0 0 20px rgba(197,160,89,0.3)",
                             cursor: "pointer",
                         }}
                             onClick={() => navigator.clipboard?.writeText(roomCode)}
@@ -239,19 +240,20 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
                         </div>
                     )}
                     <div style={{
-                        color: "rgba(197,160,89,0.5)", fontSize: "13px", letterSpacing: "3px",
-                        textAlign: "center", marginBottom: 10,
+                        color: "rgba(200,210,220,0.6)", fontSize: "14px", letterSpacing: "4px",
+                        textAlign: "left", marginBottom: 10,
                         animation: "loadingPulse 2s ease-in-out infinite",
+                        fontFamily: "'Cinzel', serif"
                     }}>
                         {onlineStatus}
                     </div>
                     {roomCode && (
-                        <div style={{ color: "rgba(197,160,89,0.3)", fontSize: "11px", textAlign: "center", marginBottom: 20 }}>
+                        <div style={{ color: "rgba(200,210,220,0.4)", fontSize: "11px", textAlign: "left", marginBottom: 20, letterSpacing: "1px" }}>
                             {t.SHARE_CODE}
                         </div>
                     )}
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
-                    <button className="menu-item" onClick={() => { setStep("mode"); setRoomCode(""); }} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => { setStep("mode"); setRoomCode(""); }} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.CANCEL}
                     </button>
@@ -260,19 +262,19 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
             {step === "side" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {t.CHOOSE_SIDE}
                     </div>
                     <button className="menu-item" onClick={() => { setSide("w"); setStep("difficulty"); }}>
-                        <span className="menu-icon">👼</span>
+                        <span className="menu-icon" style={{ filter: "grayscale(1) brightness(1.5)" }}>♙</span>
                         {t.ANGELS}
                     </button>
                     <button className="menu-item" onClick={() => { setSide("b"); setStep("difficulty"); }}>
-                        <span className="menu-icon">😈</span>
+                        <span className="menu-icon" style={{ filter: "grayscale(1) brightness(0.6)" }}>♟</span>
                         {t.DEMONS}
                     </button>
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
-                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+                    <button className="menu-item" onClick={() => setStep("mode")} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>
@@ -281,72 +283,70 @@ export default function NewGamePanel({ onStart, onBack, allPhasesReady }) {
 
             {step === "difficulty" && (
                 <>
-                    <div style={{ color: "rgba(197,160,89,0.6)", fontSize: "16px", letterSpacing: "6px", marginBottom: "30px", fontFamily: "'Cinzel Decorative', serif", textAlign: "center", fontWeight: 700 }}>
+                    <div style={{ color: "#c8cdd4", fontSize: "clamp(26px, 5vw, 36px)", letterSpacing: "4px", marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif", fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)" }}>
                         {t.CHOOSE_DIFF}
                     </div>
 
                     {[
-                        { id: "RECRUIT", label: t.DIFF_1, icon: "🌿", desc: t.DIFF_1_DESC, col: "#00ffff" },
-                        { id: "SOLDIER", label: t.DIFF_2, icon: "⚔", desc: t.DIFF_2_DESC, col: "#c5a059" },
-                        { id: "COMMANDER", label: t.DIFF_3, icon: "💀", desc: t.DIFF_3_DESC, col: "#ff0044" },
-                        { id: "GRANDMASTER", label: t.DIFF_4, icon: "🧠", desc: t.DIFF_4_DESC, col: "#bf5af2" },
+                        { id: "RECRUIT", label: t.DIFF_1, icon: "⚔", desc: t.DIFF_1_DESC, col: "#8ca0be" },
+                        { id: "SOLDIER", label: t.DIFF_2, icon: "🛡", desc: t.DIFF_2_DESC, col: "#c8cdd4" },
+                        { id: "COMMANDER", label: t.DIFF_3, icon: "⚜", desc: t.DIFF_3_DESC, col: "#e0c88a" },
+                        { id: "GRANDMASTER", label: t.DIFF_4, icon: "👁", desc: t.DIFF_4_DESC, col: "#c5a059" },
                     ].map(({ id, label, icon, desc, col }) => (
-                        <button
+                        <div
                             key={id}
                             onClick={() => setDiff(id)}
                             style={{
                                 width: "100%",
-                                background: diff === id ? `${col}18` : "rgba(5,1,10,0.4)",
-                                border: `1px solid ${diff === id ? col : "rgba(197,160,89,0.2)"}`,
-                                color: diff === id ? col : "rgba(197,160,89,0.65)",
-                                padding: "18px 28px",
-                                marginBottom: "12px",
+                                background: diff === id ? `linear-gradient(90deg, ${col}15, transparent)` : "transparent",
+                                borderLeft: `3px solid ${diff === id ? col : "transparent"}`,
+                                color: diff === id ? col : "rgba(200,210,220,0.5)",
+                                padding: "14px 20px",
+                                marginBottom: "8px",
                                 fontFamily: "'Cinzel', serif",
-                                letterSpacing: "4px",
-                                fontSize: "18px",
+                                letterSpacing: "3px",
                                 textAlign: "left",
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "20px",
-                                transition: "all 0.2s",
-                                boxShadow: diff === id ? `0 0 20px ${col}33` : "none",
+                                gap: "16px",
+                                transition: "all 0.3s ease",
                                 cursor: "pointer",
-                                backdropFilter: "blur(4px)",
+                            }}
+                            onMouseEnter={e => {
+                                if (diff !== id) e.currentTarget.style.background = "rgba(200,210,220,0.03)";
+                            }}
+                            onMouseLeave={e => {
+                                if (diff !== id) e.currentTarget.style.background = "transparent";
                             }}
                         >
-                            <span style={{ fontSize: "26px" }}>{icon}</span>
+                            <span style={{ fontSize: "24px", opacity: diff === id ? 1 : 0.6, width: "32px", textAlign: "center" }}>{icon}</span>
                             <div>
-                                <div style={{ fontWeight: 700 }}>{label}</div>
-                                <div style={{ fontSize: "13px", opacity: 0.7, letterSpacing: "1.5px", marginTop: "4px" }}>{desc}</div>
+                                <div style={{ fontWeight: 600, fontSize: "16px", textTransform: "uppercase" }}>{label}</div>
+                                <div style={{ fontSize: "12px", opacity: diff === id ? 0.8 : 0.5, letterSpacing: "1px", marginTop: "4px", textTransform: "none", fontFamily: "sans-serif" }}>{desc}</div>
                             </div>
-                            {diff === id && <span style={{ marginLeft: "auto", fontSize: "14px", fontWeight: 700 }}>✦ {t.SELECTED}</span>}
-                        </button>
+                        </div>
                     ))}
 
-                    <div style={{ height: "1px", background: "rgba(197,160,89,0.2)", margin: "24px 0" }} />
+                    <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
                     <button
                         onClick={() => onStart({ mode: "ai", diff, side })}
+                        className="hud-btn"
                         style={{
-                            width: "100%",
-                            background: "rgba(197,160,89,0.25)",
-                            border: "1px solid #c5a059",
+                            width: "200px",
+                            background: "transparent",
+                            borderColor: "#c5a059",
                             color: "#c5a059",
-                            padding: "22px",
-                            cursor: "pointer",
-                            fontFamily: "'Cinzel', serif",
-                            fontSize: "24px",
-                            letterSpacing: "6px",
+                            padding: "16px",
+                            fontSize: "16px",
+                            letterSpacing: "4px",
                             fontWeight: 700,
-                            marginBottom: "12px",
-                            transition: "all 0.2s",
-                            textShadow: "0 0 15px rgba(197,160,89,0.6)",
+                            marginBottom: "16px",
+                            boxShadow: "0 0 15px rgba(197,160,89,0.1)",
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(197,160,89,0.35)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(197,160,89,0.25)"}
                     >
-                        ⚔ {t.START_BATTLE}
+                        {t.START_BATTLE}
                     </button>
-                    <button className="menu-item" onClick={() => setStep("side")} style={{ fontSize: "16px", opacity: 0.6, border: "none", background: "transparent" }}>
+                    <button className="menu-item" onClick={() => setStep("side")} style={{ fontSize: "15px", opacity: 0.6 }}>
                         <span className="menu-icon">←</span>
                         {t.BACK}
                     </button>

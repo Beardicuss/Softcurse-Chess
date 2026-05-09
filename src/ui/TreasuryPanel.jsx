@@ -17,33 +17,40 @@ export default function TreasuryPanel({ onBack }) {
     };
 
     return (
-        <div className="sub-panel" style={{ width: "100%", maxWidth: "460px", margin: "0 auto" }}>
+        <div className="sub-panel" style={{ width: "100%", maxWidth: "500px", margin: "0", textAlign: "left", paddingRight: "10px" }}>
             {/* Title */}
             <div style={{
-                color: "rgba(197,160,89,0.5)", fontSize: "14px", letterSpacing: "5px",
-                marginBottom: "20px", fontFamily: "'Cinzel Decorative', serif",
-                textAlign: "center", fontWeight: 700,
+                color: "#c8cdd4", fontSize: "clamp(28px, 6vw, 42px)", letterSpacing: "4px",
+                marginBottom: "24px", fontFamily: "'Cinzel Decorative', serif",
+                fontWeight: 700, textShadow: "0 0 20px rgba(140,160,190,0.2)"
             }}>
                 {t.TREASURY || "TREASURY"}
             </div>
 
             {/* Tabs */}
             <div style={{
-                display: "flex", gap: "0", marginBottom: "20px",
-                border: "1px solid rgba(197,160,89,0.2)", overflow: "hidden",
+                display: "flex", gap: "20px", marginBottom: "24px",
+                borderBottom: "1px solid rgba(200,210,220,0.1)", paddingBottom: "12px",
             }}>
                 {TABS.map((tb) => (
                     <button
                         key={tb}
                         onClick={() => setTab(tb)}
                         style={{
-                            flex: 1, padding: "10px 0",
-                            background: tab === tb ? "rgba(197,160,89,0.15)" : "rgba(5,1,10,0.4)",
-                            color: tab === tb ? "#c5a059" : "rgba(197,160,89,0.4)",
-                            border: "none", borderRight: "1px solid rgba(197,160,89,0.1)",
-                            fontFamily: "'Cinzel', serif", fontSize: "11px",
+                            background: "transparent",
+                            color: tab === tb ? "#c5a059" : "rgba(200,210,220,0.5)",
+                            border: "none",
+                            fontFamily: "'Cinzel', serif", fontSize: "14px",
                             letterSpacing: "3px", fontWeight: 700, cursor: "pointer",
                             transition: "all 0.2s",
+                            padding: "4px 8px",
+                            borderBottom: tab === tb ? "2px solid #c5a059" : "2px solid transparent",
+                        }}
+                        onMouseEnter={e => {
+                            if (tab !== tb) e.currentTarget.style.color = "rgba(200,210,220,0.8)";
+                        }}
+                        onMouseLeave={e => {
+                            if (tab !== tb) e.currentTarget.style.color = "rgba(200,210,220,0.5)";
                         }}
                     >
                         {t[tb] || tb}
@@ -53,30 +60,35 @@ export default function TreasuryPanel({ onBack }) {
 
             {/* PIECES Tab */}
             {tab === "PIECES" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "50vh", overflowY: "auto", paddingRight: "8px" }}>
                     {PIECE_SKINS.map((skin) => {
                         const isActive = activeSkin === skin.id;
                         return (
-                            <button
+                            <div
                                 key={skin.id}
                                 onClick={() => handleSelect(skin.id)}
                                 style={{
                                     width: "100%",
-                                    background: isActive ? "rgba(197,160,89,0.12)" : "rgba(5,1,10,0.4)",
-                                    border: `1px solid ${isActive ? "#c5a059" : "rgba(197,160,89,0.15)"}`,
+                                    background: isActive ? "linear-gradient(90deg, rgba(197,160,89,0.15), transparent)" : "transparent",
+                                    borderLeft: `3px solid ${isActive ? "#c5a059" : "transparent"}`,
                                     padding: "16px 20px",
                                     cursor: "pointer",
                                     textAlign: "left",
-                                    transition: "all 0.25s ease",
-                                    boxShadow: isActive ? "0 0 20px rgba(197,160,89,0.15), inset 0 0 30px rgba(197,160,89,0.05)" : "none",
+                                    transition: "all 0.3s ease",
                                     position: "relative",
                                     overflow: "hidden",
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isActive) e.currentTarget.style.background = "rgba(200,210,220,0.03)";
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isActive) e.currentTarget.style.background = "transparent";
                                 }}
                             >
                                 {/* Equipped badge */}
                                 {isActive && (
                                     <div style={{
-                                        position: "absolute", top: "8px", right: "12px",
+                                        position: "absolute", top: "12px", right: "16px",
                                         color: "#c5a059", fontSize: "10px", letterSpacing: "2px",
                                         fontFamily: "'Cinzel', serif", fontWeight: 700,
                                         opacity: 0.8,
@@ -87,11 +99,11 @@ export default function TreasuryPanel({ onBack }) {
 
                                 {/* Icon + Name */}
                                 <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "6px" }}>
-                                    <span style={{ fontSize: "24px" }}>{skin.icon}</span>
+                                    <span style={{ fontSize: "28px", width: "32px", textAlign: "center", opacity: isActive ? 1 : 0.6 }}>{skin.icon}</span>
                                     <span style={{
                                         fontFamily: "'Cinzel Decorative', serif",
-                                        fontSize: "15px", fontWeight: 700,
-                                        color: isActive ? "#e0c88a" : "rgba(197,160,89,0.7)",
+                                        fontSize: "16px", fontWeight: 700,
+                                        color: isActive ? "#e0c88a" : "rgba(200,210,220,0.7)",
                                         letterSpacing: "2px",
                                     }}>
                                         {skin.name}
@@ -100,13 +112,13 @@ export default function TreasuryPanel({ onBack }) {
 
                                 {/* Description */}
                                 <div style={{
-                                    fontFamily: "'Cinzel', serif", fontSize: "11px",
-                                    color: "rgba(197,160,89,0.45)", letterSpacing: "1px",
-                                    paddingLeft: "38px",
+                                    fontFamily: "sans-serif", fontSize: "12px",
+                                    color: isActive ? "rgba(200,210,220,0.8)" : "rgba(200,210,220,0.4)",
+                                    letterSpacing: "1px", paddingLeft: "46px",
                                 }}>
                                     {skin.description}
                                 </div>
-                            </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -123,8 +135,8 @@ export default function TreasuryPanel({ onBack }) {
             )}
 
             {/* Back button */}
-            <div style={{ height: "1px", background: "rgba(197,160,89,0.15)", margin: "20px 0" }} />
-            <button className="menu-item" onClick={onBack} style={{ fontSize: "14px", opacity: 0.6, border: "none", background: "transparent" }}>
+            <div style={{ height: "1px", background: "linear-gradient(90deg, rgba(200,210,220,0.15), transparent)", margin: "24px 0" }} />
+            <button className="menu-item" onClick={onBack} style={{ fontSize: "15px", opacity: 0.6 }}>
                 <span className="menu-icon">←</span>
                 {t.BACK}
             </button>
@@ -135,24 +147,24 @@ export default function TreasuryPanel({ onBack }) {
 function ComingSoon({ items, label }) {
     return (
         <div style={{
-            textAlign: "center", padding: "40px 20px",
-            border: "1px solid rgba(197,160,89,0.1)",
-            background: "rgba(5,1,10,0.3)",
+            textAlign: "left", padding: "40px 20px",
+            borderLeft: "3px solid rgba(200,210,220,0.1)",
+            background: "linear-gradient(90deg, rgba(200,210,220,0.02), transparent)",
         }}>
             <div style={{ fontSize: "32px", marginBottom: "12px", opacity: 0.3 }}>🔒</div>
             <div style={{
                 fontFamily: "'Cinzel Decorative', serif",
-                fontSize: "14px", color: "rgba(197,160,89,0.3)",
+                fontSize: "16px", color: "rgba(200,210,220,0.5)",
                 letterSpacing: "4px", fontWeight: 700, marginBottom: "8px",
             }}>
                 COMING SOON
             </div>
             <div style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: "11px", color: "rgba(197,160,89,0.2)",
+                fontFamily: "sans-serif",
+                fontSize: "12px", color: "rgba(200,210,220,0.3)",
                 letterSpacing: "1px",
             }}>
-                New {label.toLowerCase()} skins will appear here
+                New {label.toLowerCase()} skins will appear here.
             </div>
         </div>
     );

@@ -169,8 +169,8 @@ export default function BattleChess3D() {
     // ── Board model loading (from engine/sceneSetup.js) ───────
 
 
-    // Phase 1: board + ground + figures + walls
-    const phase1Total = 5;
+    // Phase 1: board + ground + figures + walls + audio
+    const phase1Total = 6;
     let phase1Loaded = 0;
     let scenePhasesReady = false;
     const phase1tick = () => { phase1Loaded++; setPhase1Progress(phase1Loaded / phase1Total); };
@@ -205,7 +205,8 @@ export default function BattleChess3D() {
       }, undefined, rej));
       const p1Basement = loadBasementModel(scene).then(() => phase1tick());
       const p1Figures = preloadModels().then(() => phase1tick());
-      Promise.all([p1Board, p1Ground, p1Walls, p1Basement, p1Figures]).then(() => {
+      const p1Audio = AudioEngine.preload().then(() => phase1tick());
+      Promise.all([p1Board, p1Ground, p1Walls, p1Basement, p1Figures, p1Audio]).then(() => {
         scenePhasesReady = true;
         setPhase1Ready(true);
         setAllPhasesReady(true);
@@ -403,7 +404,9 @@ export default function BattleChess3D() {
         window._battleChessPromoChoice = (p) => { setPromoModal(null); executeMove(fr, ff, tr, tf, p); };
         return;
       }
-      AudioEngine.move();
+      // Play capture or move SFX
+      const isCapture = g.board[tr][tf] || (piece.t === "P" && g.ep && tr === g.ep[0] && tf === g.ep[1]);
+      if (isCapture) AudioEngine.capture(); else AudioEngine.move();
       const fk = `${fr},${ff}`, tk = `${tr},${tf}`, tPos = toWorld(tr, tf);
       const movMesh = PM[fk], capMesh = PM[tk];
       const wasEP = piece.t === "P" && g.ep && tr === g.ep[0] && tf === g.ep[1];
@@ -465,6 +468,12 @@ export default function BattleChess3D() {
         }
 
         console.log("[finish] mode:", modeRef.current, "turn:", ngs.turn, "playerSide:", playerSideRef.current, "status:", ngs.status, "aiPending:", aiPendingRef.current, "animating:", animatingRef.current);
+        // Win/Lose SFX on game end
+        if (ngs.status === "checkmate") {
+          const playerWon = ngs.turn !== playerSideRef.current;
+          if (modeRef.current === "pvp" || modeRef.current === "online") AudioEngine.win(); // PvP: someone won
+          else if (playerWon) AudioEngine.win(); else AudioEngine.lose();
+        }
         // ELO update on game end (AI mode only)
         if (modeRef.current === "ai" && (ngs.status === "checkmate" || ngs.status === "stalemate")) {
           let result;
@@ -540,6 +549,8 @@ export default function BattleChess3D() {
             camState.current.theta = 0;
           }
         }
+        // Switch BGM: menu → game
+        AudioEngine.playBGM("game");
         window._battleChessReset?.();
 
         // Fast-forward mid-game sync (Spectators)

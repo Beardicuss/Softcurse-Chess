@@ -3,6 +3,7 @@ import { W, B } from "./chessEngine.js";
 import { SYM_W, SYM_B, ASSET_CDN } from "./constants.js";
 import { useLang, langCodes } from "./i18n.js";
 import SplashScreen from "./SplashScreen.jsx";
+import { AudioEngine } from "./audioEngine.js";
 
 // ═══════════════════════════════════════════════════════════════
 //  CHESS UI — Main Menu + HUD overlay
@@ -37,6 +38,9 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
 
     useEffect(() => {
         const tObj = setTimeout(() => setVisible(true), 200);
+        // Start menu BGM when menu loads
+        AudioEngine.init();
+        AudioEngine.playBGM("menu");
         return () => clearTimeout(tObj);
     }, []);
 
@@ -69,7 +73,7 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
             style={{
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column",
-                overflowY: "auto", overflowX: "hidden",
+                overflow: "hidden", // Never scroll the root!
                 zIndex: 50,
                 background: "linear-gradient(135deg, rgba(8,12,20,0.88) 0%, rgba(5,8,18,0.95) 100%)",
                 backdropFilter: "blur(4px)",
@@ -79,12 +83,17 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                 position: "relative",
                 width: "100%",
                 height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                paddingTop: "clamp(40px, 8vh, 80px)",
+                paddingLeft: "clamp(50px, 8vw, 120px)",
+                paddingBottom: "80px", // space for copyright
                 opacity: visible ? 1 : 0,
                 transition: "opacity 0.6s ease",
             }}>
 
-                {/* Title — positioned independently */}
-                <div style={{ position: "absolute", top: "8%", left: "clamp(50px, 8vw, 120px)", zIndex: 1 }}>
+                {/* Title Area */}
+                <div style={{ flexShrink: 0, marginBottom: "clamp(40px, 8vh, 80px)", position: "relative", zIndex: 1 }}>
                     <div style={{
                         fontFamily: "'Old London', sans-serif",
                         fontSize: "clamp(44px, 9vw, 82px)",
@@ -133,38 +142,51 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                     </div>
                 </div>
 
-                {/* Menu tabs — positioned independently */}
+                {/* Content Area (Tabs or Sub-panels) */}
                 <div style={{
-                    position: "absolute", top: "50%", left: "clamp(50px, 8vw, 120px)",
+                    flex: 1,
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    paddingRight: "20px",
+                    display: "flex",
+                    flexDirection: "column",
                 }}>
-                    {panel === "main" && MENU_ITEMS.map(({ label, icon, panel: p, delay, disabled }) => (
-                        <button
-                            key={label}
-                            className={`menu-item${disabled ? " disabled" : ""}`}
-                            style={{
-                                animation: visible ? `menuFadeIn 0.5s ease ${delay}ms forwards` : "none",
-                                opacity: 0,
-                            }}
-                            onClick={() => {
-                                if (p === "continue") { onStart(null); }
-                                else if (p === "exit") { forceExit(); }
-                                else setPanel(p);
-                            }}
-                        >
-                            <span className="menu-icon">{icon}</span>
-                            {label}
-                            {disabled && <span style={{ marginLeft: "auto", fontSize: "12px", opacity: 0.4 }}>NO SAVE</span>}
-                        </button>
-                    ))}
+                    {/* The menu items are naturally padded down slightly more via margin if needed, but flex gap is good */}
+                    <div style={{
+                        marginTop: panel === "main" ? "clamp(20px, 6vh, 80px)" : "0",
+                        transition: "margin 0.3s ease",
+                        display: "flex", flexDirection: "column", gap: "5px",
+                    }}>
+                        {panel === "main" && MENU_ITEMS.map(({ label, icon, panel: p, delay, disabled }) => (
+                            <button
+                                key={label}
+                                className={`menu-item${disabled ? " disabled" : ""}`}
+                                style={{
+                                    animation: visible ? `menuFadeIn 0.5s ease ${delay}ms forwards` : "none",
+                                    opacity: 0,
+                                }}
+                                onClick={() => {
+                                    AudioEngine.click();
+                                    if (p === "continue") { onStart(null); }
+                                    else if (p === "exit") { forceExit(); }
+                                    else setPanel(p);
+                                }}
+                            >
+                                <span className="menu-icon">{icon}</span>
+                                {label}
+                                {disabled && <span style={{ marginLeft: "auto", fontSize: "12px", opacity: 0.4 }}>NO SAVE</span>}
+                            </button>
+                        ))}
 
-                    {/* Sub panels */}
-                    {panel === "newgame" && <NewGamePanel onStart={onStart} onBack={() => setPanel("main")} allPhasesReady={allPhasesReady} />}
-                    {panel === "credits" && <CreditsPanel onBack={() => setPanel("main")} />}
-                    {panel === "treasury" && <TreasuryPanel onBack={() => setPanel("main")} />}
-                    {panel === "settings" && <SettingsPanel onBack={() => setPanel("main")} />}
+                        {/* Sub panels */}
+                        {panel === "newgame" && <NewGamePanel onStart={onStart} onBack={() => setPanel("main")} allPhasesReady={allPhasesReady} />}
+                        {panel === "credits" && <CreditsPanel onBack={() => setPanel("main")} />}
+                        {panel === "treasury" && <TreasuryPanel onBack={() => setPanel("main")} />}
+                        {panel === "settings" && <SettingsPanel onBack={() => setPanel("main")} />}
+                    </div>
                 </div>
 
-                {/* Copyright — bottom left */}
+                {/* Copyright — bottom left strictly bounded manually outside flex */}
                 <div style={{
                     position: "absolute", bottom: "clamp(20px, 3vh, 40px)", left: "clamp(30px, 6vw, 80px)",
                     fontFamily: "'Cinzel', serif",
