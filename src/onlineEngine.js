@@ -1,29 +1,27 @@
 /**
  * Online Engine — WebSocket client for PvP multiplayer
- * Connects to the chess-pvp-server Durable Object via WebSocket.
+ * Connects to the chess-pvp-server PartyKit room via standard WebSocket.
  */
 
-// TODO: Update this after deploying chess-pvp-server
-const PVP_SERVER = "https://chess-pvp-server.softcursesys.workers.dev";
+// PartyKit host — deployed via `npx partykit deploy`
+const PARTY_HOST = "chess-pvp-server.beardicuss.partykit.dev";
 
 let ws = null;
 let callbacks = {
-    onAssigned: null,   // (side) => {}
-    onStart: null,      // () => {}
+    onAssigned: null,     // (side, moveHistory, gameStarted) => {}
+    onStart: null,        // () => {}
     onOpponentMove: null, // ({ fr, ff, tr, tf, promo }) => {}
     onOpponentLeft: null, // () => {}
-    onError: null,      // (msg) => {}
-    onMoveOk: null,     // () => {}
-    onResign: null,     // (side) => {}
-    onRematch: null,    // () => {}
+    onError: null,        // (msg) => {}
+    onMoveOk: null,       // () => {}
+    onResign: null,       // (side) => {}
+    onRematch: null,      // () => {}
 };
 
-function connectWS(roomId) {
+function connectToRoom(roomId) {
     return new Promise((resolve, reject) => {
-        const protocol = PVP_SERVER.startsWith("https") ? "wss" : "ws";
-        const host = PVP_SERVER.replace(/^https?:\/\//, "");
-        const url = `${protocol}://${host}/room/${roomId}/ws`;
-
+        // PartyKit WebSocket URL format: wss://<host>/party/<room-id>
+        const url = `wss://${PARTY_HOST}/party/${roomId}`;
         ws = new WebSocket(url);
 
         ws.onopen = () => resolve();
@@ -70,14 +68,22 @@ function connectWS(roomId) {
     });
 }
 
+// Room code generator (no I/O/0/1 to avoid confusion)
+function generateRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+
 /**
  * Create a new game room and connect to it.
+ * Room is auto-created on PartyKit when the first WebSocket connects.
  * Returns the room code.
  */
 export async function createRoom() {
-    const res = await fetch(`${PVP_SERVER}/room/create`, { method: "POST" });
-    const { roomId } = await res.json();
-    await connectWS(roomId);
+    const roomId = generateRoomCode();
+    await connectToRoom(roomId);
     return roomId;
 }
 
@@ -86,7 +92,7 @@ export async function createRoom() {
  */
 export async function joinRoom(code) {
     const roomId = code.toUpperCase().trim();
-    await connectWS(roomId);
+    await connectToRoom(roomId);
     return roomId;
 }
 
@@ -97,7 +103,6 @@ export function sendMove(fr, ff, tr, tf, promo = "Q") {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: "move", fr, ff, tr, tf, promo }));
 }
-
 
 /**
  * Send rematch message.

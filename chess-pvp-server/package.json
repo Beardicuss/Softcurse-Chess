@@ -3,10 +3,11 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "wrangler dev",
-        "deploy": "wrangler deploy"
+        "dev": "npx partykit dev",
+        "deploy": "npx partykit deploy",
+        "login": "npx partykit login"
     },
     "devDependencies": {
-        "wrangler": "^3.0.0"
+        "partykit": "latest"
     }
 }

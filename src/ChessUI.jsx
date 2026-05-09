@@ -71,80 +71,72 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                 display: "flex", flexDirection: "column",
                 overflowY: "auto", overflowX: "hidden",
                 zIndex: 50,
-                background: "radial-gradient(ellipse at center, rgba(5,1,10,0.7) 0%, rgba(5,1,10,0.92) 100%)",
-                backdropFilter: "blur(3px)",
+                background: "linear-gradient(135deg, rgba(8,12,20,0.88) 0%, rgba(5,8,18,0.95) 100%)",
+                backdropFilter: "blur(4px)",
             }}
         >
             <div style={{
                 position: "relative",
-                width: "min(440px, 90vw)",
-                margin: "auto",
-                padding: "clamp(20px, 5vh, 60px) 0",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
+                width: "100%",
+                height: "100%",
                 opacity: visible ? 1 : 0,
                 transition: "opacity 0.6s ease",
             }}>
-                {/* Decorative background crest */}
-                <div style={{ position: "relative", width: "min(220px, 50vw)", height: "min(220px, 50vw)", marginBottom: "clamp(-80px, -15vw, -40px)" }}>
-                    <Crest />
-                </div>
 
-                {/* Title block */}
-                <div style={{ textAlign: "center", marginBottom: "50px", position: "relative", zIndex: 1 }}>
+                {/* Title — positioned independently */}
+                <div style={{ position: "absolute", top: "8%", left: "clamp(50px, 8vw, 120px)", zIndex: 1 }}>
                     <div style={{
-                        fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "clamp(32px, 9vw, 72px)",
-                        fontWeight: 900,
-                        color: "#c5a059",
-                        letterSpacing: "clamp(3px, 1vw, 8px)",
+                        fontFamily: "'Old London', sans-serif",
+                        fontSize: "clamp(44px, 9vw, 82px)",
+                        fontWeight: 700,
+                        color: "#c8cdd4",
+                        letterSpacing: "clamp(1px, 0.3vw, 3px)",
                         animation: "titleGlow 3s ease-in-out infinite",
                         lineHeight: 1.1,
+                        textShadow: "0 0 30px rgba(140,160,190,0.3), 0 2px 4px rgba(0,0,0,0.8)",
                     }}>
-                        SOFTCURSE'S
+                        Softcurse's
                     </div>
-                    <div style={{
-                        fontFamily: "'Cinzel Decorative', serif",
-                        fontSize: "clamp(40px, 12vw, 96px)",
-                        fontWeight: 900,
-                        color: "#e0c88a",
-                        letterSpacing: "clamp(2px, 1vw, 6px)",
-                        animation: "titleGlow 3s ease-in-out infinite",
-                        lineHeight: 1.0,
-                    }}>
-                        CHESS
-                    </div>
-                    <div style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: "clamp(12px, 3vw, 22px)",
-                        color: "rgba(197,160,89,0.85)",
-                        letterSpacing: "clamp(4px, 1.5vw, 12px)",
-                        marginTop: "clamp(12px, 3vw, 24px)",
-                        animation: "subtitlePulse 4s ease-in-out infinite",
-                        fontWeight: 700,
-                    }}>
-                        ANGELS VS DEMONS
+                    <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1.5vw, 16px)" }}>
+                        <div style={{
+                            fontFamily: "'Old London', sans-serif",
+                            fontSize: "clamp(44px, 9vw, 82px)",
+                            fontWeight: 700,
+                            color: "#c8cdd4",
+                            letterSpacing: "clamp(1px, 0.3vw, 3px)",
+                            animation: "titleGlow 3s ease-in-out infinite",
+                            lineHeight: 1.1,
+                            textShadow: "0 0 30px rgba(140,160,190,0.3), 0 2px 4px rgba(0,0,0,0.8)",
+                        }}>
+                            Chess
+                        </div>
+                        <span style={{
+                            fontSize: "clamp(32px, 6vw, 58px)",
+                            color: "#c8cdd4",
+                            animation: "titlePieceFloat 3s ease-in-out infinite, titleGlow 3s ease-in-out infinite",
+                            display: "inline-block",
+                            opacity: 0.8,
+                            textShadow: "0 0 30px rgba(140,160,190,0.3), 0 2px 4px rgba(0,0,0,0.8)",
+                        }}>
+                            ♚
+                        </span>
                     </div>
 
                     {/* Decorative line */}
-                    <div style={{ position: "relative", height: "1px", margin: "24px 0", overflow: "hidden" }}>
+                    <div style={{ position: "relative", height: "1px", marginTop: "16px", overflow: "hidden", width: "clamp(120px, 30vw, 240px)" }}>
                         <div style={{
-                            position: "absolute", left: "50%", transform: "translateX(-50%)",
-                            height: "1px", background: "linear-gradient(90deg, transparent, rgba(197,160,89,0.7), transparent)",
+                            position: "absolute", left: 0,
+                            height: "1px", background: "linear-gradient(90deg, rgba(197,160,89,0.6), transparent)",
                             animation: visible ? "lineExpand 1s ease forwards" : "none",
                             width: "100%",
                         }} />
                     </div>
                 </div>
 
-                {/* Menu box */}
+                {/* Menu tabs — positioned independently */}
                 <div style={{
-                    position: "relative",
-                    width: "100%",
-                    padding: "10px 0",
+                    position: "absolute", top: "50%", left: "clamp(50px, 8vw, 120px)",
                 }}>
-                    {/* Main menu items */}
                     {panel === "main" && MENU_ITEMS.map(({ label, icon, panel: p, delay, disabled }) => (
                         <button
                             key={label}
@@ -172,12 +164,13 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                     {panel === "settings" && <SettingsPanel onBack={() => setPanel("main")} />}
                 </div>
 
+                {/* Copyright — bottom left */}
                 <div style={{
-                    marginTop: "24px",
+                    position: "absolute", bottom: "clamp(20px, 3vh, 40px)", left: "clamp(30px, 6vw, 80px)",
                     fontFamily: "'Cinzel', serif",
-                    fontSize: "12px",
-                    color: "rgba(197,160,89,0.3)",
-                    letterSpacing: "4px",
+                    fontSize: "11px",
+                    color: "rgba(160,170,180,0.25)",
+                    letterSpacing: "3px",
                     fontWeight: 600,
                 }}>
                     SOFTCURSE STUDIO © 2026
@@ -280,7 +273,7 @@ export default function ChessUI({
                     style={{
                         position: "absolute", inset: 0, zIndex: 9999,
                         background: "#0a0604",
-                        backgroundImage: "url('/assets/poster.png')",
+                        backgroundImage: "url('/assets/poster.jpg')",
                         backgroundSize: "cover", backgroundPosition: "center top",
                         display: "flex", flexDirection: "column",
                         alignItems: "center", justifyContent: "flex-end",
@@ -443,7 +436,7 @@ export default function ChessUI({
                             <div style={{ width: 2, height: 32, background: "#c5a059", boxShadow: "0 0 8px #c5a059", display: window.innerWidth <= 768 ? "none" : "block" }} />
                             <div style={{ display: window.innerWidth <= 768 ? "none" : "block" }}>
                                 <div style={{ color: "#c5a059", fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "clamp(2px, 0.8vw, 5px)", opacity: 0.75, fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>Softcurse's Chess</div>
-                                <div style={{ color: "#e0f0ff", fontSize: "clamp(14px, 3vw, 20px)", letterSpacing: "clamp(1px, 0.5vw, 3px)", fontWeight: "bold", textShadow: "0 0 10px rgba(197,160,89,.6)", fontFamily: "'Cinzel Decorative', serif", textTransform: "uppercase" }}>{t.AVD}</div>
+
                             </div>
                         </div>
 
