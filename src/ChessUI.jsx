@@ -166,7 +166,6 @@ function MainMenu({ onStart, hasSave, allPhasesReady }) {
                                     opacity: 0,
                                 }}
                                 onClick={() => {
-                                    AudioEngine.click();
                                     if (p === "continue") { onStart(null); }
                                     else if (p === "exit") { forceExit(); }
                                     else setPanel(p);

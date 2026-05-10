@@ -9,8 +9,7 @@ const SFX_FILES = {
     capture: "piece_capture.mp3",
     check: "game_check.mp3",
     win: "game_win.mp3",
-    lose: "game_lose.mp3",
-    click: "ui_click.mp3",
+    lose: "game_lose.mp3"
 };
 
 const BGM_FILES = {
@@ -174,12 +173,15 @@ export const AudioEngine = {
     },
     setSfx(v) {
         this.volumes.sfx = v;
+        this._applyBGMVolume(); // bgm_game is now linked to SFX
         saveVolumes(this.volumes);
     },
 
     _applyBGMVolume() {
-        for (const audio of Object.values(this.bgmElements)) {
-            audio.volume = Math.max(0, Math.min(1, this.volumes.master * this.volumes.music));
+        for (const [key, audio] of Object.entries(this.bgmElements)) {
+            // "menu" uses Music slider, "game" uses SFX slider since it's ambient
+            const mult = (key === "game") ? this.volumes.sfx : this.volumes.music;
+            audio.volume = Math.max(0, Math.min(1, this.volumes.master * mult));
         }
     },
 
